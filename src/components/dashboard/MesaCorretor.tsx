@@ -710,55 +710,110 @@ export function MesaCorretor() {
                 </button>
             </div>
 
+            {/* Cabeçalho Condensado (Top Bar) */}
+            <div className="border-b border-gray-100 bg-white shrink-0 flex flex-col">
+                {/* Linha 1: Metadados da Redação e Ferramentas */}
+                <div className="flex items-center justify-between px-8 py-3 border-b border-gray-50 flex-wrap gap-4">
+                    <div className="flex items-center gap-5">
+                        <div className="flex items-center gap-3 text-gray-400">
+                            <UserIcon size={14} />
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-dark-gray">{redacao.nick}</span>
+                            <span className="text-gray-200">|</span>
+                            <span className="text-[11px] font-medium">{redacao.nr_serie}</span>
+                        </div>
+                        <div className="w-px h-4 bg-gray-200" />
+                        <h1 className="text-sm font-bold text-dark-gray truncate max-w-sm" title={redacao.titulo || 'Sem Título'}>
+                            {redacao.titulo || 'Sem Título'}
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100">
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider pl-2">Filtrar Grifos:</span>
+                            <select
+                                className="bg-transparent text-[11px] font-bold text-gray-600 outline-none cursor-pointer pr-1"
+                                value={filterHighlightCriterio}
+                                onChange={(e) => setFilterHighlightCriterio(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                            >
+                                <option value="all">TODOS</option>
+                                {CRITERIOS.map(c => <option key={`fh-${c.id}`} value={c.id}>Critério {c.id}</option>)}
+                            </select>
+                        </div>
+                        <button
+                            onClick={() => {
+                                setToolbarMode(prev => prev === 'floating' ? 'fixed' : 'floating');
+                                if (!window.getSelection()?.toString() && highlightPopup?.visible) {
+                                    setHighlightPopup(null);
+                                }
+                            }}
+                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors uppercase shadow-sm whitespace-nowrap"
+                        >
+                            {toolbarMode === 'floating' ? (
+                                <><Pin size={12} /> Fixar Barra Texto</>
+                            ) : (
+                                <><PinOff size={12} /> Barra Flutuante</>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Linha 2: Avaliação e Abas */}
+                <div className="flex items-center justify-between px-8 py-2.5 bg-gray-50/30">
+                    <div className="flex items-center gap-4">
+                        <h2 className="text-xs font-bold text-dark-gray flex items-center gap-2 uppercase tracking-wider">
+                            <BookOpen className="text-accent-red" size={14} />
+                            Avaliação Técnica
+                        </h2>
+                        <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, favorita: !formData.favorita })}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-colors ${formData.favorita
+                                ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
+                                : 'bg-white text-gray-400 border border-gray-200 hover:bg-yellow-50 hover:text-yellow-600'
+                                }`}
+                        >
+                            <Star size={10} className={formData.favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
+                            {formData.favorita ? 'Favorita' : 'Favoritar'}
+                        </button>
+                        {message && (
+                            <div className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded transition-all",
+                                message.type === 'success' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                            )}>
+                                {message.text}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex bg-gray-100/80 p-0.5 rounded-lg space-x-1 border border-gray-200/50">
+                        {CRITERIOS.map((c) => (
+                            <button
+                                key={`tab-${c.id}`}
+                                type="button"
+                                onClick={() => setActiveCriterio(c.id)}
+                                className={cn(
+                                    "px-4 py-1.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
+                                    activeCriterio === c.id
+                                        ? "bg-white text-accent-red shadow-sm border border-gray-200/50"
+                                        : "text-gray-500 hover:text-dark-gray hover:bg-white/50"
+                                )}
+                            >
+                                <div className="flex items-center justify-center gap-1.5">
+                                    Competência {c.id}
+                                    {((formData as any)[`criterio_${c.id}_tema_1`] || (formData as any)[`criterio_${c.id}_observacao`]) && (
+                                        <CheckCircle2 size={10} className="text-green-500" />
+                                    )}
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
             <div className="flex flex-1 overflow-hidden">
                 {/* Coluna da Esquerda: Leitura */}
-                <div className="w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:p-12 bg-white custom-scrollbar relative">
+                <div className="w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:px-12 bg-white custom-scrollbar relative">
                     <div className="w-full">
-                        <div className="flex items-center justify-between gap-3 mb-8">
-                            <div className="flex items-center gap-3 text-gray-400">
-                                <UserIcon size={16} />
-                                <span className="text-sm font-medium uppercase tracking-widest">{redacao.nick}</span>
-                                <span className="text-gray-200">|</span>
-                                <span className="text-sm">{redacao.nr_serie}</span>
-                            </div>
-
-                            {/* Filtro de Destaques Visuais */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">Filtro de Grifos:</span>
-                                <select
-                                    className="bg-gray-50 border border-gray-200 text-sm rounded-lg px-2 py-1 text-gray-600 outline-none focus:ring-2 focus:ring-accent-red/20"
-                                    value={filterHighlightCriterio}
-                                    onChange={(e) => setFilterHighlightCriterio(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                                >
-                                    <option value="all">Ver Todos</option>
-                                    {CRITERIOS.map(c => <option key={`fh-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                </select>
-                            </div>
-                        </div>
-
-                        {/* Toggle de Modo da Toolbar */}
-                        <div className="flex items-center justify-between mb-10">
-                            <h1 className="text-3xl font-serif font-bold text-dark-gray leading-tight">
-                                {redacao.titulo || 'Sem Título'}
-                            </h1>
-                            <button
-                                onClick={() => {
-                                    setToolbarMode(prev => prev === 'floating' ? 'fixed' : 'floating');
-                                    // if switching to fixed, ensure popup position doesn't matter, but clear visibility if nothing selected
-                                    if (!window.getSelection()?.toString() && highlightPopup?.visible) {
-                                        setHighlightPopup(null);
-                                    }
-                                }}
-                                className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded hover:bg-gray-100 transition-colors"
-                            >
-                                {toolbarMode === 'floating' ? (
-                                    <><Pin size={14} /> Fixar Barra Marca-Texto</>
-                                ) : (
-                                    <><PinOff size={14} /> Usar Flutuante</>
-                                )}
-                            </button>
-                        </div>
-
                         {/* Barra Fixa (Estilo Word) */}
                         {toolbarMode === 'fixed' && (
                             <div className={cn(
@@ -890,224 +945,191 @@ export function MesaCorretor() {
                 </div>
 
                 {/* Coluna da Direita: Formulário */}
-                <div className="w-1/2 overflow-y-auto p-8 lg:p-12 bg-gray-50/50 custom-scrollbar">
+                <div className="w-1/2 overflow-y-auto p-8 lg:px-12 bg-gray-50/50 custom-scrollbar">
                     <div className="w-full">
-                        <div className="flex items-center justify-between mb-8">
-                            <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-bold text-dark-gray flex items-center gap-2">
-                                    <BookOpen className="text-accent-red" size={20} />
-                                    Avaliação Técnica
-                                </h2>
-                                <button
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, favorita: !formData.favorita })}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-colors ${formData.favorita
-                                        ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                                        : 'bg-gray-50 text-gray-400 border border-gray-200 hover:bg-yellow-50 hover:text-yellow-600'
-                                        }`}
-                                >
-                                    <Star size={14} className={formData.favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
-                                    {formData.favorita ? 'Favorita' : 'Marcar Favorita'}
-                                </button>
-                            </div>
-                            {message && (
-                                <div className={cn(
-                                    "text-sm px-4 py-2 rounded-lg transition-all animate-in fade-in slide-in-from-top-2",
-                                    message.type === 'success' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                                )}>
-                                    {message.text}
-                                </div>
-                            )}
-                        </div>
-
                         <form onSubmit={handleSubmit} className="space-y-6">
-                            {CRITERIOS.map((c) => {
-                                const isActive = activeCriterio === c.id;
+                            {/* Conteúdo da Competência Ativa */}
+                            {(() => {
+                                const c = CRITERIOS.find(crit => crit.id === activeCriterio);
+                                if (!c) return null;
+
                                 const notasIA = (redacao as any)[`criterio_${c.id}_nota`];
                                 const devolutivaIA = (redacao as any)[`criterio_${c.id}_devolutiva`];
-                                const hasFormContent = (formData as any)[`criterio_${c.id}_tema_1`] || (formData as any)[`criterio_${c.id}_observacao`];
                                 const criterionHighlights = highlights.filter(h => h.criterio_id === c.id && (!h.target || h.target === 'texto'));
 
                                 return (
-                                    <div key={c.id} className={cn(
-                                        "bg-white rounded-2xl border transition-all duration-300 overflow-hidden",
-                                        isActive ? "border-accent-red/30 shadow-[0_8px_30px_-10px_rgba(239,68,68,0.1)] p-6" : "border-gray-100 shadow-sm p-5 hover:border-gray-300 cursor-pointer"
-                                    )}>
-                                        <div
-                                            className="flex items-center justify-between"
-                                            onClick={() => !isActive && setActiveCriterio(c.id)}
-                                        >
+                                    <div key={`content-${c.id}`} className="bg-white rounded-3xl border border-accent-red/20 shadow-[0_8px_30px_-10px_rgba(239,68,68,0.1)] p-8 mt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                        <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-100">
                                             <div>
-                                                <h3 className={cn("font-bold transition-colors", isActive ? "text-dark-gray text-xl" : "text-gray-600 text-lg")}>
+                                                <h3 className="font-bold text-dark-gray text-2xl mb-2">
                                                     {c.name}
                                                 </h3>
-                                                <p className="text-xs text-gray-400 uppercase tracking-tighter mt-1">{c.desc}</p>
+                                                <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">{c.desc}</p>
                                             </div>
-                                            <div className="flex items-center gap-3">
-                                                {!isActive && hasFormContent && (
-                                                    <span className="flex items-center gap-1 text-[10px] font-bold text-green-600 bg-green-50 px-2 py-1 rounded-md uppercase tracking-wider">
-                                                        <Check size={12} /> Avaliado
-                                                    </span>
-                                                )}
-                                                <div className="bg-accent-red/5 px-3 py-1.5 rounded-full border border-accent-red/10">
-                                                    <span className="text-sm font-bold text-accent-red">IA: {notasIA} pts</span>
-                                                </div>
+                                            <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10">
+                                                <span className="text-sm font-bold text-accent-red">Pontuação IA: {notasIA}</span>
                                             </div>
                                         </div>
 
-                                        {isActive && (
-                                            <div className="mt-8 animate-in fade-in slide-in-from-top-4 duration-300">
+                                        {/* Bloco da IA */}
+                                        <div className="mb-10">
+                                            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
+                                                <BookOpen size={16} />
+                                                Devolutiva da Inteligência Artificial
+                                            </h4>
+                                            <div
+                                                className="text-[16px] text-gray-700 leading-relaxed whitespace-pre-wrap selection:bg-accent-red/20 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50"
+                                                data-devolutiva="true"
+                                                data-criterio-id={c.id}
+                                                onMouseUp={handleTextSelection}
+                                            >
+                                                {renderTextWithHighlights(devolutivaIA, true, c.id)}
+                                            </div>
 
-                                                {/* Bloco da IA */}
-                                                <div className="mb-8">
-                                                    <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                                                        <BookOpen size={14} className="text-gray-400" />
-                                                        Devolutiva da IA
-                                                    </h4>
-                                                    <div
-                                                        className="text-[15px] text-gray-800 leading-relaxed whitespace-pre-wrap selection:bg-gray-200/60"
-                                                        data-devolutiva="true"
-                                                        data-criterio-id={c.id}
-                                                        onMouseUp={handleTextSelection}
-                                                    >
-                                                        {renderTextWithHighlights(devolutivaIA, true, c.id)}
-                                                    </div>
-
-                                                    {/* Grifos atrelados a este critério */}
-                                                    {criterionHighlights.length > 0 && (
-                                                        <div className="mt-5 pt-4 border-t border-gray-200">
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3">
-                                                                Trechos Grifados na Redação ({criterionHighlights.length})
-                                                            </p>
-                                                            <div className="flex flex-col gap-2">
-                                                                {criterionHighlights.map((h, idx) => (
-                                                                    <div key={`hc-${idx}`} className="bg-white border border-gray-200 rounded-lg p-3 text-sm flex gap-3 shadow-sm relative group">
-                                                                        <div className={cn("w-1.5 rounded-full shrink-0",
-                                                                            h.cor === 'verde' ? 'bg-green-400' :
-                                                                                h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
-                                                                        )}></div>
-                                                                        <div>
-                                                                            <p className="text-gray-800 italic line-clamp-2">&quot;{h.texto_marcado}&quot;</p>
-                                                                            {h.observacao && <p className="text-gray-500 text-xs mt-1 font-medium">{h.observacao}</p>}
-                                                                        </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleRemoveHighlight({ stopPropagation: () => { } } as any, highlights.indexOf(h))}
-                                                                            className="absolute top-2 right-2 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1 rounded"
-                                                                            title="Remover Destaque"
-                                                                        >
-                                                                            <X size={14} />
-                                                                        </button>
-                                                                    </div>
-                                                                ))}
+                                            {/* Grifos atrelados a este critério */}
+                                            {criterionHighlights.length > 0 && (
+                                                <div className="mt-6 pt-6 border-t border-gray-100">
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+                                                        Trechos Grifados na Redação ({criterionHighlights.length})
+                                                    </p>
+                                                    <div className="flex flex-col gap-3">
+                                                        {criterionHighlights.map((h, idx) => (
+                                                            <div key={`hc-${idx}`} className="bg-white border border-gray-100 rounded-xl p-4 text-sm flex gap-4 shadow-sm relative group hover:border-gray-200 transition-colors">
+                                                                <div className={cn("w-1.5 rounded-full shrink-0 shadow-sm",
+                                                                    h.cor === 'verde' ? 'bg-green-400' :
+                                                                        h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
+                                                                )}></div>
+                                                                <div className="pr-6">
+                                                                    <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
+                                                                    {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveHighlight({ stopPropagation: () => { } } as any, highlights.indexOf(h))}
+                                                                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-md hover:bg-red-50"
+                                                                    title="Remover Destaque"
+                                                                >
+                                                                    <X size={16} />
+                                                                </button>
                                                             </div>
-                                                        </div>
-                                                    )}
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Campos de Correção Manual */}
+                                        <div className="space-y-6">
+                                            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
+                                                <UserIcon size={16} />
+                                                Sua Avaliação
+                                            </h4>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                                {/* Tema 1 */}
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Pts Positivos</label>
+                                                    <select
+                                                        value={(formData as any)[`criterio_${c.id}_tema_1`]}
+                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        <optgroup label="Correto">
+                                                            <option value="Satisfatório">Satisfatório</option>
+                                                            <option value="Vago">Vago</option>
+                                                            <option value="Incompleto">Incompleto</option>
+                                                            <option value="Com erros">Com erros</option>
+                                                        </optgroup>
+                                                        <optgroup label="Incorreto">
+                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                            <option value="Não identificou">Não identificou</option>
+                                                            <option value="Alucinação">Alucinação</option>
+                                                        </optgroup>
+                                                    </select>
                                                 </div>
 
-                                                {/* Campos de Correção Manual */}
-                                                <div className="space-y-5">
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                                                        {/* Tema 1 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">Pts Positivos</label>
-                                                            <select
-                                                                value={(formData as any)[`criterio_${c.id}_tema_1`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
-                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all shadow-sm"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
+                                                {/* Tema 2 */}
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Prob. de Perda</label>
+                                                    <select
+                                                        value={(formData as any)[`criterio_${c.id}_tema_2`]}
+                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        <optgroup label="Correto">
+                                                            <option value="Satisfatório">Satisfatório</option>
+                                                            <option value="Vago">Vago</option>
+                                                            <option value="Incompleto">Incompleto</option>
+                                                            <option value="Com erros">Com erros</option>
+                                                        </optgroup>
+                                                        <optgroup label="Incorreto">
+                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                            <option value="Não identificou">Não identificou</option>
+                                                            <option value="Alucinação">Alucinação</option>
+                                                        </optgroup>
+                                                    </select>
+                                                </div>
 
-                                                        {/* Tema 2 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">Prob. de Perda</label>
-                                                            <select
-                                                                value={(formData as any)[`criterio_${c.id}_tema_2`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
-                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all shadow-sm"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
-
-                                                        {/* Tema 3 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">Sug. de Melhoria</label>
-                                                            <select
-                                                                value={(formData as any)[`criterio_${c.id}_tema_3`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
-                                                                className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all shadow-sm"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Observação */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2 mt-4 text-left">Observações sobre a avaliação (opcional)</label>
-                                                        <textarea
-                                                            rows={2}
-                                                            value={(formData as any)[`criterio_${c.id}_observacao`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
-                                                            placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
-                                                            className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all resize-none shadow-sm"
-                                                        />
-                                                    </div>
-
-                                                    {/* Navigation Button */}
-                                                    {c.id < 5 && (
-                                                        <div className="pt-4 flex justify-end">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setActiveCriterio(c.id + 1)}
-                                                                className="flex items-center gap-2 text-sm font-bold text-accent-red hover:text-red-700 bg-accent-red/5 hover:bg-accent-red/10 px-5 py-2.5 rounded-xl transition-colors"
-                                                            >
-                                                                Próxima Competência <ChevronRight size={16} />
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                {/* Tema 3 */}
+                                                <div>
+                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sug. de Melhoria</label>
+                                                    <select
+                                                        value={(formData as any)[`criterio_${c.id}_tema_3`]}
+                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        <optgroup label="Correto">
+                                                            <option value="Satisfatório">Satisfatório</option>
+                                                            <option value="Vago">Vago</option>
+                                                            <option value="Incompleto">Incompleto</option>
+                                                            <option value="Com erros">Com erros</option>
+                                                        </optgroup>
+                                                        <optgroup label="Incorreto">
+                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                            <option value="Não identificou">Não identificou</option>
+                                                            <option value="Alucinação">Alucinação</option>
+                                                        </optgroup>
+                                                    </select>
                                                 </div>
                                             </div>
-                                        )}
+
+                                            {/* Observação */}
+                                            <div>
+                                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 mt-6 text-left">Observações adicionais (opcional)</label>
+                                                <textarea
+                                                    rows={3}
+                                                    value={(formData as any)[`criterio_${c.id}_observacao`]}
+                                                    onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
+                                                    placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
+                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all resize-none text-gray-700"
+                                                />
+                                            </div>
+
+                                            {/* Navigation Button */}
+                                            {c.id < 5 && (
+                                                <div className="pt-8 flex justify-end">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            setActiveCriterio(c.id + 1);
+                                                            // Opcional: fazer o container scrollar para o topo do formulário suavemente
+                                                            document.querySelector('.custom-scrollbar')?.scrollTo({ top: 0, behavior: 'smooth' });
+                                                        }}
+                                                        className="flex items-center gap-2 text-[15px] font-bold text-white bg-dark-gray hover:bg-black px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95"
+                                                    >
+                                                        Salvar & Próxima
+                                                        <ChevronRight size={18} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 );
-                            })}
+                            })()}
 
                             <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm mt-8">
                                 <label className="block text-lg font-bold text-dark-gray mb-1">Comentário Final do Corretor</label>
