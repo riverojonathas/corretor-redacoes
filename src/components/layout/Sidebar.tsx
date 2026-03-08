@@ -13,7 +13,7 @@ export function Sidebar() {
 
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-        { icon: Edit3, label: 'Birô de Revisão', href: '/dashboard/correcao' },
+        { icon: Edit3, label: 'Birô de Revisão', href: '/dashboard/revisao' },
         ...(cargo === 'admin' ? [{ icon: Upload, label: 'Upload', href: '/admin/upload' }] : []),
         { icon: Settings, label: 'Configurações', href: '/settings' },
     ];

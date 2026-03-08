@@ -162,7 +162,7 @@ export default function DashboardPage() {
                                 <span className="font-semibold text-dark-gray">Nova Redação</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Envie um texto para correção imediata.</span>
                             </button>
-                            <button onClick={() => router.push('/dashboard/correcao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group">
+                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group">
                                 <FileText className="text-gray-400 group-hover:text-accent-red mb-3" size={24} />
                                 <span className="font-semibold text-dark-gray">Birô de Revisão</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para corrigir ou revisar redações.</span>

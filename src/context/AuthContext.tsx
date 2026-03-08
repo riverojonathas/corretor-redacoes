@@ -61,34 +61,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         let mounted = true;
 
-        // Failsafe para evitar tela de loading infinita caso o Supabase demore ou trave
-        const failsafeTimeout = setTimeout(() => {
-            if (mounted) setLoading(false);
-        }, 3000);
+        const initAuth = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!mounted) return;
 
-        // Get initial session
-        supabase.auth.getSession().then(async ({ data: { session } }: { data: { session: Session | null } }) => {
-            if (!mounted) return;
-            setSession(session);
-            setUser(session?.user ?? null);
-            if (session?.user) {
-                // Execute fetchCargo but ensure we don't block indefinitely
-                await Promise.race([
-                    fetchCargo(session.user.id),
-                    new Promise(resolve => setTimeout(resolve, 2500))
-                ]);
+                setSession(session);
+                setUser(session?.user ?? null);
+
+                if (session?.user) {
+                    fetchCargo(session.user.id).catch(console.error);
+                }
+            } catch (err: any) {
+                console.error('Session error:', err);
+            } finally {
+                if (mounted) {
+                    setLoading(false);
+                }
             }
-            if (mounted) {
-                clearTimeout(failsafeTimeout);
-                setLoading(false);
-            }
-        }).catch((err: any) => {
-            console.error('Session error:', err);
-            if (mounted) {
-                clearTimeout(failsafeTimeout);
-                setLoading(false);
-            }
-        });
+        };
+
+        initAuth();
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: string, session: Session | null) => {
@@ -99,18 +92,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             if (event === 'SIGNED_OUT') {
                 setCargo(null);
-            } else if (session?.user) {
-                if (event === 'SIGNED_IN') {
-                    await fetchCargo(session.user.id);
-                }
-                // We purposefully DO NOT set loading=true on TOKEN_REFRESHED to avoid 
-                // tearing down the entire component tree while the user is active.
+            } else if (session?.user && event === 'SIGNED_IN') {
+                fetchCargo(session.user.id).catch(console.error);
             }
         });
 
         return () => {
             mounted = false;
-            clearTimeout(failsafeTimeout);
             subscription.unsubscribe();
         };
     }, []);

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
 import {
     CheckCircle2,
     AlertCircle,
@@ -21,7 +22,8 @@ import {
     PinOff,
     Move,
     ClipboardList,
-    GraduationCap
+    GraduationCap,
+    Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -48,12 +50,13 @@ interface RedacaoListItem {
     titulo: string;
     nick: string;
     nr_serie: string;
-    status: 'pendente' | 'corrigida';
+    status: 'pendente' | 'corrigida' | 'rascunho' | 'concluida';
     revisao_id?: string;
     favorita?: boolean;
     model_id?: string;
     titulo_modelo?: string;
     nm_tipo_ensino?: string;
+    answer_id?: string;
 }
 
 interface Highlight {
@@ -76,8 +79,9 @@ const CRITERIOS = [
     { id: 5, name: 'Competência 5', desc: 'Proposta de intervenção' },
 ];
 
-export function MesaCorretor() {
+export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) {
     const { user } = useAuth();
+    const router = useRouter();
 
     // View state
     const [view, setView] = useState<'list' | 'correction'>('list');
@@ -87,6 +91,7 @@ export function MesaCorretor() {
     // Correction state
     const [redacao, setRedacao] = useState<Redacao | null>(null);
     const [loadingRedacao, setLoadingRedacao] = useState(false);
+    const [notFoundError, setNotFoundError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
@@ -136,13 +141,27 @@ export function MesaCorretor() {
     // Accordion UI State
     const [activeCriterio, setActiveCriterio] = useState<number>(1);
 
+    const getCriterioStatus = (criterioId: number) => {
+        const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
+        const t2 = (formData as any)[`criterio_${criterioId}_tema_2`];
+        const t3 = (formData as any)[`criterio_${criterioId}_tema_3`];
+
+        const answeredCount = [t1, t2, t3].filter(val => val && val.toString().trim() !== '').length;
+
+        if (answeredCount === 3) return 'complete';
+        if (answeredCount > 0) return 'partial';
+        return 'empty';
+    };
+
+    const isAllComplete = CRITERIOS.every(c => getCriterioStatus(c.id) === 'complete');
+
     const fetchLista = useCallback(async () => {
         if (!user) return;
         setLoadingLista(true);
         try {
             const { data: redacoes, error } = await supabase
                 .from('redacoes')
-                .select('id, titulo, nick, nr_serie, model_id, titulo_modelo, nm_tipo_ensino, revisoes(id, corretor_id, favorita)')
+                .select('id, titulo, nick, nr_serie, model_id, titulo_modelo, nm_tipo_ensino, answer_id, revisoes(id, corretor_id, favorita, status)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -158,7 +177,8 @@ export function MesaCorretor() {
                         model_id: r.model_id,
                         titulo_modelo: r.titulo_modelo,
                         nm_tipo_ensino: r.nm_tipo_ensino,
-                        status: rev ? 'corrigida' : 'pendente',
+                        answer_id: r.answer_id,
+                        status: rev ? (rev.status || 'concluida') : 'pendente',
                         revisao_id: rev?.id,
                         favorita: rev?.favorita || false
                     };
@@ -173,10 +193,52 @@ export function MesaCorretor() {
     }, [user]);
 
     useEffect(() => {
-        if (view === 'list') {
+        if (!user) return;
+
+        if (initialAnswerId) {
+            setView('correction');
+            loadInitialAnswer(initialAnswerId);
+        } else if (view === 'list') {
             fetchLista();
         }
-    }, [view, fetchLista]);
+    }, [view, fetchLista, initialAnswerId, user]);
+
+    const loadInitialAnswer = async (answerId: string) => {
+        setLoadingRedacao(true);
+        setNotFoundError(false);
+        setMessage(null);
+
+        try {
+            // First find the redacao by answer_id
+            const { data: redacaoData, error: redacaoError } = await supabase
+                .from('redacoes')
+                .select('id')
+                .eq('answer_id', answerId)
+                .single();
+
+            if (redacaoError || !redacaoData) {
+                setNotFoundError(true);
+                return;
+            }
+
+            // If found, load it normally by internal ID
+            // Check if there is already a revisao for this user
+            const { data: revData } = await supabase
+                .from('revisoes')
+                .select('id')
+                .eq('redacao_id', redacaoData.id)
+                .eq('corretor_id', user!.id)
+                .single();
+
+            await handleSelectRedacao(redacaoData.id, revData?.id);
+
+        } catch (err) {
+            console.error('Erro ao buscar redação por answer_id:', err);
+            setNotFoundError(true);
+        } finally {
+            setLoadingRedacao(false);
+        }
+    };
 
     const handleSelectRedacao = async (id: string, revisaoId?: string) => {
         if (!user) return;
@@ -267,9 +329,14 @@ export function MesaCorretor() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSaveRevisao = async (e: React.FormEvent, isDraft: boolean) => {
         e.preventDefault();
         if (!redacao || !user) return;
+
+        if (!isDraft && !isAllComplete) {
+            setMessage({ type: 'error', text: 'Preencha todos os campos obrigatórios para finalizar a revisão.' });
+            return;
+        }
 
         setSubmitting(true);
         try {
@@ -289,6 +356,7 @@ export function MesaCorretor() {
                     .from('revisoes')
                     .update({
                         ...formData,
+                        status: isDraft ? 'rascunho' : 'concluida',
                         data_correcao: new Date().toISOString()
                     })
                     .eq('id', revData.id);
@@ -301,6 +369,7 @@ export function MesaCorretor() {
                         redacao_id: redacao.id,
                         corretor_id: user.id,
                         ...formData,
+                        status: isDraft ? 'rascunho' : 'concluida',
                         data_correcao: new Date().toISOString()
                     }])
                     .select('id').single();
@@ -325,7 +394,7 @@ export function MesaCorretor() {
                 }
             }
 
-            setMessage({ type: 'success', text: 'Correção salva com sucesso!' });
+            setMessage({ type: 'success', text: isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!' });
 
             // Voltar pra lista após 2 segundos
             setTimeout(() => {
@@ -333,8 +402,8 @@ export function MesaCorretor() {
             }, 2000);
 
         } catch (error: any) {
-            console.error('Erro ao salvar:', error);
-            setMessage({ type: 'error', text: 'Erro ao salvar correção: ' + error.message });
+            console.error('Erro ao salvar:', JSON.stringify(error, null, 2), error);
+            setMessage({ type: 'error', text: 'Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido. Verifique o console.') });
         } finally {
             setSubmitting(false);
         }
@@ -546,11 +615,33 @@ export function MesaCorretor() {
     };
 
     if (view === 'list') {
+        if (initialAnswerId && notFoundError) {
+            return (
+                <div className="flex-1 flex items-center justify-center p-8 bg-gray-50 bg-pattern min-h-[calc(100vh-64px)]">
+                    <div className="bg-white p-12 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100 flex flex-col items-center">
+                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
+                            <AlertCircle size={40} className="text-accent-red" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-dark-gray mb-3">Redação não encontrada</h2>
+                        <p className="text-gray-500 mb-8 leading-relaxed">Não foi possível localizar nenhuma redação com o ID fornecido (<code className="bg-gray-100 px-2 py-1 rounded text-accent-red font-mono text-xs">{initialAnswerId}</code>) na base de dados.</p>
+
+                        <button
+                            onClick={() => window.location.href = '/dashboard/revisao'}
+                            className="bg-dark-gray text-white font-bold py-3 px-8 rounded-xl hover:bg-black transition-colors w-full flex items-center justify-center gap-2"
+                        >
+                            <ArrowLeft size={18} />
+                            Fila de Revisão
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)] bg-gray-50/30">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-dark-gray">Fila de Correção</h1>
+                        <h1 className="text-3xl font-bold text-dark-gray">Fila de Revisão</h1>
                         <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
                     </div>
                 </div>
@@ -618,7 +709,13 @@ export function MesaCorretor() {
                             {redacoesFiltradas.map((item) => (
                                 <button
                                     key={item.id}
-                                    onClick={() => handleSelectRedacao(item.id, item.revisao_id)}
+                                    onClick={() => {
+                                        if (item.answer_id) {
+                                            router.push(`/dashboard/revisao/${item.answer_id}`);
+                                        } else {
+                                            handleSelectRedacao(item.id, item.revisao_id);
+                                        }
+                                    }}
                                     className="w-full flex items-center justify-between p-6 hover:bg-gray-50 hover:pl-8 transition-all text-left group"
                                 >
                                     <div className="flex-1 min-w-0 pr-4">
@@ -629,15 +726,20 @@ export function MesaCorretor() {
                                                 {item.model_id || 'Modelo Não Informado'}
                                             </span>
 
-                                            {item.status === 'pendente' ? (
+                                            {item.status === 'concluida' || item.status === 'corrigida' ? (
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-100">
+                                                    <Check size={12} />
+                                                    Concluída
+                                                </span>
+                                            ) : item.status === 'rascunho' ? (
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-100">
+                                                    <Clock size={12} />
+                                                    Rascunho
+                                                </span>
+                                            ) : (
                                                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-100">
                                                     <Clock size={12} />
                                                     Pendente
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-100">
-                                                    <Check size={12} />
-                                                    Corrigida
                                                 </span>
                                             )}
                                         </div>
@@ -687,7 +789,13 @@ export function MesaCorretor() {
                 <h2 className="text-2xl font-bold text-dark-gray mb-2">Erro ao carregar</h2>
                 <p className="text-gray-500">Não foi possível encontrar a redação selecionada.</p>
                 <button
-                    onClick={() => setView('list')}
+                    onClick={() => {
+                        if (initialAnswerId) {
+                            window.location.href = '/dashboard/revisao';
+                        } else {
+                            setView('list');
+                        }
+                    }}
                     className="mt-6 flex items-center gap-2 px-6 py-2 bg-gray-100 text-dark-gray rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
                     <ArrowLeft size={16} />
@@ -702,7 +810,13 @@ export function MesaCorretor() {
             {/* Top Toolbar */}
             <div className="h-14 border-b border-gray-100 flex items-center px-8 bg-gray-50/50 shrink-0">
                 <button
-                    onClick={() => setView('list')}
+                    onClick={() => {
+                        if (initialAnswerId) {
+                            window.location.href = '/dashboard/revisao';
+                        } else {
+                            setView('list');
+                        }
+                    }}
                     className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-dark-gray transition-colors"
                 >
                     <ArrowLeft size={16} />
@@ -794,14 +908,21 @@ export function MesaCorretor() {
                                 className={cn(
                                     "px-4 py-1.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
                                     activeCriterio === c.id
-                                        ? "bg-white text-accent-red shadow-sm border border-gray-200/50"
-                                        : "text-gray-500 hover:text-dark-gray hover:bg-white/50"
+                                        ? "bg-white text-dark-gray shadow-sm border border-gray-200/50 ring-2 ring-inset ring-gray-100"
+                                        : "text-gray-500 hover:text-dark-gray hover:bg-white/50",
+                                    getCriterioStatus(c.id) === 'complete' && activeCriterio !== c.id && "text-green-600 bg-green-50/50",
+                                    getCriterioStatus(c.id) === 'complete' && activeCriterio === c.id && "ring-green-200 text-green-700",
+                                    getCriterioStatus(c.id) === 'partial' && activeCriterio !== c.id && "text-yellow-600 bg-yellow-50/50",
+                                    getCriterioStatus(c.id) === 'partial' && activeCriterio === c.id && "ring-yellow-200 text-yellow-700"
                                 )}
                             >
                                 <div className="flex items-center justify-center gap-1.5">
                                     Competência {c.id}
-                                    {((formData as any)[`criterio_${c.id}_tema_1`] || (formData as any)[`criterio_${c.id}_observacao`]) && (
-                                        <CheckCircle2 size={10} className="text-green-500" />
+                                    {getCriterioStatus(c.id) === 'complete' && (
+                                        <CheckCircle2 size={12} className="text-green-500 shrink-0" />
+                                    )}
+                                    {getCriterioStatus(c.id) === 'partial' && (
+                                        <AlertCircle size={12} className="text-yellow-500 shrink-0" />
                                     )}
                                 </div>
                             </button>
@@ -945,9 +1066,9 @@ export function MesaCorretor() {
                 </div>
 
                 {/* Coluna da Direita: Formulário */}
-                <div className="w-1/2 overflow-y-auto p-8 lg:px-12 bg-gray-50/50 custom-scrollbar">
+                <div className="w-1/2 overflow-y-auto bg-gray-50/50 custom-scrollbar relative">
                     <div className="w-full">
-                        <form onSubmit={handleSubmit} className="space-y-6">
+                        <form onSubmit={(e) => handleSaveRevisao(e, false)} className="pb-8">
                             {/* Conteúdo da Competência Ativa */}
                             {(() => {
                                 const c = CRITERIOS.find(crit => crit.id === activeCriterio);
@@ -958,180 +1079,164 @@ export function MesaCorretor() {
                                 const criterionHighlights = highlights.filter(h => h.criterio_id === c.id && (!h.target || h.target === 'texto'));
 
                                 return (
-                                    <div key={`content-${c.id}`} className="bg-white rounded-3xl border border-accent-red/20 shadow-[0_8px_30px_-10px_rgba(239,68,68,0.1)] p-8 mt-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-100">
+                                    <div key={`content-${c.id}`} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                        <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200 flex items-start justify-between px-8 lg:px-12 py-6 shadow-sm">
                                             <div>
-                                                <h3 className="font-bold text-dark-gray text-2xl mb-2">
+                                                <h3 className="font-bold text-dark-gray text-2xl mb-1">
                                                     {c.name}
                                                 </h3>
-                                                <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">{c.desc}</p>
+                                                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-widest">{c.desc}</p>
                                             </div>
                                             <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10">
-                                                <span className="text-sm font-bold text-accent-red">Pontuação IA: {notasIA}</span>
+                                                <span className="text-sm font-bold text-accent-red">Nota IA: {notasIA}</span>
                                             </div>
                                         </div>
 
-                                        {/* Bloco da IA */}
-                                        <div className="mb-10">
-                                            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                <BookOpen size={16} />
-                                                Devolutiva da Inteligência Artificial
-                                            </h4>
-                                            <div
-                                                className="text-[16px] text-gray-700 leading-relaxed whitespace-pre-wrap selection:bg-accent-red/20 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50"
-                                                data-devolutiva="true"
-                                                data-criterio-id={c.id}
-                                                onMouseUp={handleTextSelection}
-                                            >
-                                                {renderTextWithHighlights(devolutivaIA, true, c.id)}
+                                        <div className="px-8 lg:px-12 mt-8">
+                                            {/* Bloco da IA */}
+                                            <div className="mb-10">
+                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
+                                                    <BookOpen size={16} />
+                                                    Devolutiva da Inteligência Artificial
+                                                </h4>
+                                                <div
+                                                    className="text-[16px] text-gray-700 leading-relaxed whitespace-pre-wrap selection:bg-accent-red/20 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50"
+                                                    data-devolutiva="true"
+                                                    data-criterio-id={c.id}
+                                                    onMouseUp={handleTextSelection}
+                                                >
+                                                    {renderTextWithHighlights(devolutivaIA, true, c.id)}
+                                                </div>
+
+                                                {/* Grifos atrelados a este critério */}
+                                                {criterionHighlights.length > 0 && (
+                                                    <div className="mt-6 pt-6 border-t border-gray-100">
+                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
+                                                            Trechos Grifados na Redação ({criterionHighlights.length})
+                                                        </p>
+                                                        <div className="flex flex-col gap-3">
+                                                            {criterionHighlights.map((h, idx) => (
+                                                                <div key={`hc-${idx}`} className="bg-white border border-gray-100 rounded-xl p-4 text-sm flex gap-4 shadow-sm relative group hover:border-gray-200 transition-colors">
+                                                                    <div className={cn("w-1.5 rounded-full shrink-0 shadow-sm",
+                                                                        h.cor === 'verde' ? 'bg-green-400' :
+                                                                            h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
+                                                                    )}></div>
+                                                                    <div className="pr-6">
+                                                                        <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
+                                                                        {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRemoveHighlight({ stopPropagation: () => { } } as any, highlights.indexOf(h))}
+                                                                        className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-md hover:bg-red-50"
+                                                                        title="Remover Destaque"
+                                                                    >
+                                                                        <X size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* Grifos atrelados a este critério */}
-                                            {criterionHighlights.length > 0 && (
-                                                <div className="mt-6 pt-6 border-t border-gray-100">
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
-                                                        Trechos Grifados na Redação ({criterionHighlights.length})
-                                                    </p>
-                                                    <div className="flex flex-col gap-3">
-                                                        {criterionHighlights.map((h, idx) => (
-                                                            <div key={`hc-${idx}`} className="bg-white border border-gray-100 rounded-xl p-4 text-sm flex gap-4 shadow-sm relative group hover:border-gray-200 transition-colors">
-                                                                <div className={cn("w-1.5 rounded-full shrink-0 shadow-sm",
-                                                                    h.cor === 'verde' ? 'bg-green-400' :
-                                                                        h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
-                                                                )}></div>
-                                                                <div className="pr-6">
-                                                                    <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
-                                                                    {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
-                                                                </div>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveHighlight({ stopPropagation: () => { } } as any, highlights.indexOf(h))}
-                                                                    className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-md hover:bg-red-50"
-                                                                    title="Remover Destaque"
-                                                                >
-                                                                    <X size={16} />
-                                                                </button>
-                                                            </div>
-                                                        ))}
+                                            {/* Campos de Revisão Manual */}
+                                            <div className="space-y-6">
+                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
+                                                    <UserIcon size={16} />
+                                                    Sua Avaliação
+                                                </h4>
+
+                                                <div className="flex flex-col gap-6">
+                                                    {/* Tema 1 */}
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação de pontos positivos</label>
+                                                        <select
+                                                            value={(formData as any)[`criterio_${c.id}_tema_1`]}
+                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                        >
+                                                            <option value="">Selecione...</option>
+                                                            <optgroup label="Correto">
+                                                                <option value="Satisfatório">Satisfatório</option>
+                                                                <option value="Vago">Vago</option>
+                                                                <option value="Incompleto">Incompleto</option>
+                                                                <option value="Com erros">Com erros</option>
+                                                            </optgroup>
+                                                            <optgroup label="Incorreto">
+                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                <option value="Não identificou">Não identificou</option>
+                                                                <option value="Alucinação">Alucinação</option>
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Tema 2 */}
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação do problema que levou à perda de nota (quando há perda)</label>
+                                                        <select
+                                                            value={(formData as any)[`criterio_${c.id}_tema_2`]}
+                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                        >
+                                                            <option value="">Selecione...</option>
+                                                            <optgroup label="Correto">
+                                                                <option value="Satisfatório">Satisfatório</option>
+                                                                <option value="Vago">Vago</option>
+                                                                <option value="Incompleto">Incompleto</option>
+                                                                <option value="Com erros">Com erros</option>
+                                                            </optgroup>
+                                                            <optgroup label="Incorreto">
+                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                <option value="Não identificou">Não identificou</option>
+                                                                <option value="Alucinação">Alucinação</option>
+                                                            </optgroup>
+                                                        </select>
+                                                    </div>
+
+                                                    {/* Tema 3 */}
+                                                    <div>
+                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sugestão de melhoria ao estudante (quando necessária).</label>
+                                                        <select
+                                                            value={(formData as any)[`criterio_${c.id}_tema_3`]}
+                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
+                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
+                                                        >
+                                                            <option value="">Selecione...</option>
+                                                            <optgroup label="Correto">
+                                                                <option value="Satisfatório">Satisfatório</option>
+                                                                <option value="Vago">Vago</option>
+                                                                <option value="Incompleto">Incompleto</option>
+                                                                <option value="Com erros">Com erros</option>
+                                                            </optgroup>
+                                                            <optgroup label="Incorreto">
+                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                <option value="Não identificou">Não identificou</option>
+                                                                <option value="Alucinação">Alucinação</option>
+                                                            </optgroup>
+                                                        </select>
                                                     </div>
                                                 </div>
-                                            )}
-                                        </div>
 
-                                        {/* Campos de Correção Manual */}
-                                        <div className="space-y-6">
-                                            <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                <UserIcon size={16} />
-                                                Sua Avaliação
-                                            </h4>
-
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                                {/* Tema 1 */}
+                                                {/* Observação */}
                                                 <div>
-                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Pts Positivos</label>
-                                                    <select
-                                                        value={(formData as any)[`criterio_${c.id}_tema_1`]}
-                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                    >
-                                                        <option value="">Selecione...</option>
-                                                        <optgroup label="Correto">
-                                                            <option value="Satisfatório">Satisfatório</option>
-                                                            <option value="Vago">Vago</option>
-                                                            <option value="Incompleto">Incompleto</option>
-                                                            <option value="Com erros">Com erros</option>
-                                                        </optgroup>
-                                                        <optgroup label="Incorreto">
-                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                            <option value="Não identificou">Não identificou</option>
-                                                            <option value="Alucinação">Alucinação</option>
-                                                        </optgroup>
-                                                    </select>
+                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 mt-6 text-left">Observações adicionais (opcional)</label>
+                                                    <textarea
+                                                        rows={3}
+                                                        value={(formData as any)[`criterio_${c.id}_observacao`]}
+                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
+                                                        placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
+                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all resize-none text-gray-700"
+                                                    />
                                                 </div>
 
-                                                {/* Tema 2 */}
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Prob. de Perda</label>
-                                                    <select
-                                                        value={(formData as any)[`criterio_${c.id}_tema_2`]}
-                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                    >
-                                                        <option value="">Selecione...</option>
-                                                        <optgroup label="Correto">
-                                                            <option value="Satisfatório">Satisfatório</option>
-                                                            <option value="Vago">Vago</option>
-                                                            <option value="Incompleto">Incompleto</option>
-                                                            <option value="Com erros">Com erros</option>
-                                                        </optgroup>
-                                                        <optgroup label="Incorreto">
-                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                            <option value="Não identificou">Não identificou</option>
-                                                            <option value="Alucinação">Alucinação</option>
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
-
-                                                {/* Tema 3 */}
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sug. de Melhoria</label>
-                                                    <select
-                                                        value={(formData as any)[`criterio_${c.id}_tema_3`]}
-                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                    >
-                                                        <option value="">Selecione...</option>
-                                                        <optgroup label="Correto">
-                                                            <option value="Satisfatório">Satisfatório</option>
-                                                            <option value="Vago">Vago</option>
-                                                            <option value="Incompleto">Incompleto</option>
-                                                            <option value="Com erros">Com erros</option>
-                                                        </optgroup>
-                                                        <optgroup label="Incorreto">
-                                                            <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                            <option value="Não identificou">Não identificou</option>
-                                                            <option value="Alucinação">Alucinação</option>
-                                                        </optgroup>
-                                                    </select>
-                                                </div>
                                             </div>
-
-                                            {/* Observação */}
-                                            <div>
-                                                <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 mt-6 text-left">Observações adicionais (opcional)</label>
-                                                <textarea
-                                                    rows={3}
-                                                    value={(formData as any)[`criterio_${c.id}_observacao`]}
-                                                    onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
-                                                    placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
-                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all resize-none text-gray-700"
-                                                />
-                                            </div>
-
-                                            {/* Navigation Button */}
-                                            {c.id < 5 && (
-                                                <div className="pt-8 flex justify-end">
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            setActiveCriterio(c.id + 1);
-                                                            // Opcional: fazer o container scrollar para o topo do formulário suavemente
-                                                            document.querySelector('.custom-scrollbar')?.scrollTo({ top: 0, behavior: 'smooth' });
-                                                        }}
-                                                        className="flex items-center gap-2 text-[15px] font-bold text-white bg-dark-gray hover:bg-black px-8 py-3.5 rounded-xl transition-all shadow-md active:scale-95"
-                                                    >
-                                                        Salvar & Próxima
-                                                        <ChevronRight size={18} />
-                                                    </button>
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 );
                             })()}
 
-                            <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm mt-8">
+                            <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm mt-8 mx-8 lg:mx-12">
                                 <label className="block text-lg font-bold text-dark-gray mb-1">Comentário Final do Corretor</label>
                                 <p className="text-sm font-medium text-gray-400 mb-4">Revisão geral e fechamento (opcional).</p>
                                 <textarea
@@ -1143,20 +1248,47 @@ export function MesaCorretor() {
                                 />
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={submitting}
-                                className="w-full bg-dark-gray text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-black transition-all shadow-lg active:scale-[0.98] disabled:opacity-70"
-                            >
-                                {submitting ? (
-                                    <Loader2 className="animate-spin" size={20} />
-                                ) : (
-                                    <>
-                                        <span>Salvar Correção</span>
-                                        <Send size={18} />
-                                    </>
-                                )}
-                            </button>
+                            <div className="mx-8 lg:mx-12 mt-6">
+                                <div className="p-4 bg-white border outline-none border-gray-100 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div className="flex-1 text-xs text-gray-500 font-medium">
+                                        {isAllComplete ? (
+                                            <span className="text-green-600 flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-md w-fit">
+                                                <CheckCircle2 size={14} /> Pronto para finalizar
+                                            </span>
+                                        ) : (
+                                            <span className="text-yellow-600 flex items-center gap-1.5 bg-yellow-50 px-3 py-1.5 rounded-md w-fit">
+                                                <AlertCircle size={14} /> Preencha todas as competências para finalizar
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="flex w-full md:w-auto gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => handleSaveRevisao(e, true)}
+                                            disabled={submitting}
+                                            className="w-full md:w-auto px-6 py-3 rounded-xl font-bold bg-white text-dark-gray border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-gray-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <Save size={18} />
+                                            <span>Salvar Rascunho</span>
+                                        </button>
+
+                                        <button
+                                            type="submit"
+                                            disabled={submitting || !isAllComplete}
+                                            className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white bg-dark-gray hover:bg-black focus:ring-4 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 group"
+                                        >
+                                            {submitting ? (
+                                                <Loader2 className="animate-spin" size={20} />
+                                            ) : (
+                                                <>
+                                                    <span>Finalizar Revisão</span>
+                                                    <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </form>
                     </div>
                 </div>

@@ -3,35 +3,61 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
+import Link from 'next/link';
 import { Bell, Search, User, ChevronDown } from 'lucide-react';
 
 export function Topbar() {
     const { user, cargo } = useAuth();
     const pathname = usePathname();
 
-    const formatBreadcrumb = (path: string) => {
+    const renderBreadcrumbs = (path: string) => {
         const parts = path.split('/').filter(Boolean);
-        if (parts.length === 0) return 'Dashboard';
 
         const labels: Record<string, string> = {
             'dashboard': 'Dashboard',
-            'correcao': 'Birô de Revisão',
+            'correcao': 'Correção',
+            'revisao': 'Revisão',
             'redacoes': 'Redações',
             'admin': 'Admin',
             'upload': 'Upload',
             'settings': 'Configurações'
         };
 
-        return parts.map(p => labels[p] || p.charAt(0).toUpperCase() + p.slice(1)).join(' / ');
+        if (parts.length === 0) {
+            return <Link href="/dashboard" className="text-dark-gray font-medium hover:text-blue-600 transition-colors">Dashboard</Link>;
+        }
+
+        return parts.map((part, index) => {
+            const isLast = index === parts.length - 1;
+            const href = '/' + parts.slice(0, index + 1).join('/');
+            const label = labels[part] || part.charAt(0).toUpperCase() + part.slice(1);
+
+            console.log('Breadcrumb:', { part, href, label, isLast });
+
+            return (
+                <React.Fragment key={href}>
+                    {index > 0 && <span className="text-gray-300">/</span>}
+                    {isLast ? (
+                        <span className="text-dark-gray font-medium cursor-default">{label}</span>
+                    ) : (
+                        <Link href={href} className="text-blue-500 hover:text-blue-700 underline transition-colors cursor-pointer relative z-50">
+                            {label}
+                        </Link>
+                    )}
+                </React.Fragment>
+            );
+        });
     };
 
     return (
         <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40">
             {/* Left side: Breadcrumbs or Search */}
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>FDE</span>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Link href="/dashboard" className="hover:text-dark-gray transition-colors">FDE</Link>
                 <span className="text-gray-300">/</span>
-                <span className="text-dark-gray font-medium">{formatBreadcrumb(pathname)}</span>
+                <div className="flex items-center gap-2">
+                    {renderBreadcrumbs(pathname)}
+                </div>
             </div>
 
             {/* Right side: Actions & Profile */}
