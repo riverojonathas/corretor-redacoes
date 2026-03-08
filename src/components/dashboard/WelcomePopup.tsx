@@ -9,7 +9,7 @@ interface WelcomePopupProps {
 }
 
 export function WelcomePopup({ onClose }: WelcomePopupProps) {
-    const { user, setPrimeiroAcesso } = useAuth();
+    const { user, nome, setPrimeiroAcesso } = useAuth();
     const [finishing, setFinishing] = React.useState(false);
     const [step, setStep] = React.useState(0);
     const totalSteps = 4;
@@ -48,7 +48,9 @@ export function WelcomePopup({ onClose }: WelcomePopupProps) {
                     {step === 0 && (
                         <div className="animate-in fade-in slide-in-from-right-4 duration-300 flex-1 flex flex-col justify-center">
                             <div className="text-center mb-8">
-                                <h2 className="text-2xl font-bold text-dark-gray mb-3">Bem-vindo(a) ao Corretor!</h2>
+                                <h2 className="text-2xl font-bold text-dark-gray mb-3">
+                                    Bem-vindo(a){nome ? `, ${nome.split(' ')[0]}` : ' ao Corretor'}!
+                                </h2>
                                 <p className="text-gray-500 leading-relaxed text-sm">
                                     Este é um ambiente inteligente para auxílio na revisão e correção de redações.
                                     Preparamos um rápido tour para você conhecer nossas principais ferramentas.

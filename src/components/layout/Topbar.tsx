@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { User, ChevronDown, LogOut, Key } from 'lucide-react';
 
 export function Topbar() {
-    const { user, cargo, signOut } = useAuth();
+    const { user, cargo, nome, signOut } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -93,7 +93,7 @@ export function Topbar() {
                     >
                         <div className="text-right hidden sm:block">
                             <p className="text-xs font-semibold text-dark-gray leading-none">
-                                {user?.email?.split('@')[0] || 'Usuário'}
+                                {nome ? nome.split(' ')[0] : (user?.email?.split('@')[0] || 'Usuário')}
                             </p>
                             <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">
                                 {cargo || 'Membro'}
@@ -110,7 +110,7 @@ export function Topbar() {
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-in fade-in slide-in-from-top-2">
                             <div className="px-4 py-2 border-b border-gray-100 mb-2 sm:hidden">
                                 <p className="text-xs font-semibold text-dark-gray truncate">
-                                    {user?.email}
+                                    {nome || user?.email}
                                 </p>
                                 <p className="text-[10px] text-gray-400 uppercase mt-0.5">
                                     {cargo || 'Membro'}

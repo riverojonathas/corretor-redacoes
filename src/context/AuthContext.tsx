@@ -8,6 +8,7 @@ interface AuthContextType {
     session: Session | null;
     user: User | null;
     cargo: string | null;
+    nome: string | null;
     primeiroAcesso: boolean;
     setPrimeiroAcesso: (val: boolean) => void;
     loading: boolean;
@@ -18,6 +19,7 @@ const AuthContext = createContext<AuthContextType>({
     session: null,
     user: null,
     cargo: null,
+    nome: null,
     primeiroAcesso: false,
     setPrimeiroAcesso: () => { },
     loading: true,
@@ -28,6 +30,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [session, setSession] = useState<Session | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [cargo, setCargo] = useState<string | null>(null);
+    const [nome, setNome] = useState<string | null>(null);
     const [primeiroAcesso, setPrimeiroAcesso] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
     const fetchingCargo = React.useRef(false);
@@ -40,12 +43,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             const { data, error } = await supabase
                 .from('perfis')
-                .select('cargo, primeiro_acesso')
+                .select('cargo, primeiro_acesso, nome')
                 .eq('id', userId)
                 .single();
 
             if (!error && data) {
                 setCargo(data.cargo?.trim() || null);
+                setNome(data.nome?.trim() || null);
                 setPrimeiroAcesso(data.primeiro_acesso === true);
             } else if (error && !error.message?.includes('AbortError')) {
                 console.error('Erro ao buscar cargo:', error.message);
@@ -98,6 +102,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
             if (event === 'SIGNED_OUT') {
                 setCargo(null);
+                setNome(null);
                 setPrimeiroAcesso(false);
             } else if (session?.user && event === 'SIGNED_IN') {
                 fetchCargo(session.user.id).catch(console.error);
@@ -115,7 +120,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ session, user, cargo, primeiroAcesso, setPrimeiroAcesso, loading, signOut }}>
+        <AuthContext.Provider value={{ session, user, cargo, nome, primeiroAcesso, setPrimeiroAcesso, loading, signOut }}>
             {children}
         </AuthContext.Provider>
     );
