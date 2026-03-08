@@ -390,10 +390,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             texto_marcado: h.texto_marcado,
                             observacao: h.observacao || ''
                         };
-                        // Somente enviar target se de fato existir, para evitar erro se coluna não existir
-                        if (h.target) {
-                            payload.target = h.target;
-                        }
                         return payload;
                     });
 
