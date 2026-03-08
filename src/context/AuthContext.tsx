@@ -50,7 +50,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (!error && data) {
                 setCargo(data.cargo?.trim() || null);
                 setNome(data.nome?.trim() || null);
-                setPrimeiroAcesso(data.primeiro_acesso === true);
+
+                // Fallback: se o DB falhou em salvar (ex: erro silencioso de RLS), conferimos o lock local
+                const hasSeenLocal = typeof window !== 'undefined' ? localStorage.getItem(`onboarding_dismissed_${userId}`) : null;
+                setPrimeiroAcesso(data.primeiro_acesso === true && !hasSeenLocal);
             } else if (error && !error.message?.includes('AbortError')) {
                 console.error('Erro ao buscar cargo:', error.message);
             }

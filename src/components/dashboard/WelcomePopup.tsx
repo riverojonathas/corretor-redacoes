@@ -18,11 +18,17 @@ export function WelcomePopup({ onClose }: WelcomePopupProps) {
         setFinishing(true);
         try {
             if (user && supabase) {
-                // Tenta atualizar no supabase, ignorando erros silenciosamente caso a coluna ainda não exista
-                await supabase
+                const { error } = await supabase
                     .from('perfis')
                     .update({ primeiro_acesso: false })
                     .eq('id', user.id);
+
+                if (error) {
+                    console.error('Erro ao atualizar primeiro_acesso no banco:', error);
+                }
+
+                // Fallback no localStorage para evitar que reabra caso o DB falhe
+                localStorage.setItem(`onboarding_dismissed_${user.id}`, 'true');
             }
         } catch (e) {
             console.error(e);

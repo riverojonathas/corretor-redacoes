@@ -4,10 +4,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { User, ChevronDown, LogOut, Key } from 'lucide-react';
+import { User, ChevronDown, LogOut, Key, HelpCircle } from 'lucide-react';
 
 export function Topbar() {
-    const { user, cargo, nome, signOut } = useAuth();
+    const { user, cargo, nome, signOut, setPrimeiroAcesso } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -82,7 +82,16 @@ export function Topbar() {
             </div>
 
             {/* Right side: Actions & Profile */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4 sm:gap-6">
+                <button
+                    onClick={() => setPrimeiroAcesso(true)}
+                    className="p-2 text-gray-400 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center focus:outline-none"
+                    title="Ajuda / Tutorial"
+                    aria-label="Reabrir tutorial"
+                >
+                    <HelpCircle size={20} />
+                </button>
+
                 <div className="relative" ref={profileRef}>
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
