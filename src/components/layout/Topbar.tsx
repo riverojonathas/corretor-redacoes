@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Search, User, ChevronDown } from 'lucide-react';
+import { User, ChevronDown } from 'lucide-react';
 
 export function Topbar() {
     const { user, cargo } = useAuth();
@@ -62,15 +62,6 @@ export function Topbar() {
 
             {/* Right side: Actions & Profile */}
             <div className="flex items-center gap-6">
-                <div className="flex items-center gap-4 border-r border-gray-100 pr-6">
-                    <button className="text-gray-400 hover:text-dark-gray transition-colors">
-                        <Search size={18} />
-                    </button>
-                    <button className="text-gray-400 hover:text-dark-gray transition-colors">
-                        <Bell size={18} />
-                    </button>
-                </div>
-
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
                         <p className="text-xs font-semibold text-dark-gray leading-none">
