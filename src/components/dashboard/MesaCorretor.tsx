@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import {
     CheckCircle2,
     AlertCircle,
@@ -633,9 +634,23 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col w-64 bg-gray-800 text-white text-xs rounded-xl p-3.5 z-10 shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
                             <span className="flex items-center justify-between mb-2 pb-2 border-b border-gray-700">
                                 <span className="font-bold flex items-center gap-1.5"><BookOpen size={12} /> Critério {h.criterio_id}</span>
-                                <div className="flex gap-1">
-                                    <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-400 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" title="Editar"><Highlighter size={12} /></button>
-                                    <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" title="Remover"><X size={12} /></button>
+                                <div className="flex gap-1 z-50">
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-400 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" aria-label="Editar Destaque">
+                                                <Highlighter size={12} />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">Editar Destaque</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" aria-label="Remover Destaque">
+                                                <X size={12} />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="top">Remover Destaque</TooltipContent>
+                                    </Tooltip>
                                 </div>
                             </span>
                             <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-400">Sem observação.</i>}</span>
@@ -1253,22 +1268,32 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                         {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
                                                                     </div>
                                                                     <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)}
-                                                                            className="text-gray-300 hover:text-blue-500 bg-white p-1.5 rounded-md hover:bg-blue-50"
-                                                                            title="Editar Destaque"
-                                                                        >
-                                                                            <Highlighter size={16} />
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))}
-                                                                            className="text-gray-300 hover:text-red-500 bg-white p-1.5 rounded-md hover:bg-red-50"
-                                                                            title="Remover Destaque"
-                                                                        >
-                                                                            <X size={16} />
-                                                                        </button>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)}
+                                                                                    className="text-gray-300 hover:text-blue-500 bg-white p-1.5 rounded-md hover:bg-blue-50 shadow-sm border border-gray-100"
+                                                                                    aria-label="Editar Destaque"
+                                                                                >
+                                                                                    <Highlighter size={16} />
+                                                                                </button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="top">Editar Destaque</TooltipContent>
+                                                                        </Tooltip>
+                                                                        <Tooltip>
+                                                                            <TooltipTrigger asChild>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))}
+                                                                                    className="text-gray-300 hover:text-red-500 bg-white p-1.5 rounded-md hover:bg-red-50 shadow-sm border border-gray-100"
+                                                                                    aria-label="Remover Destaque"
+                                                                                >
+                                                                                    <X size={16} />
+                                                                                </button>
+                                                                            </TooltipTrigger>
+                                                                            <TooltipContent side="top">Remover Destaque</TooltipContent>
+                                                                        </Tooltip>
                                                                     </div>
                                                                 </div>
                                                             ))}

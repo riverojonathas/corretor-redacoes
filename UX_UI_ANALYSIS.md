@@ -42,11 +42,10 @@ Este documento contém uma auditoria profunda de Experiência do Usuário (UX) e
 **O Problema:** O corretor anota os grifos (amarelo, verde, vermelho) numa pequena caixa flutuante (`absolute`). Se o texto da observação for muito longo, a caixinha pode ficar desconfortável.
 **A Solução:** Transformar a área de "Observação" (`textarea`) do popover em um campo com auto-resize (que aumenta conforme digita) e testar a prevenção de saída da tela (Collision Detection) para que a caixinha float não vaze para fora do monitor em monitores menores.
 
-### 2.3 Acessibilidade (A11y)
-**O Problema:** A maioria dos usuários usa mouse, mas para acessibilidade (e Power Users) a navegação via teclado importa. Além disso, botões que têm apenas ícone (ex. Configurações, Pin, Mover) nem sempre deixam óbvio para o que servem para um novato.
-**A Solução:** 
-- Adicionar `aria-labels` nos botões de ícone da `Topbar`.
-- Implementar **Tooltips nativos ou via Radix UI**. Ao pairar o mouse em um ícone de `Pin`, mostrar a dica ("Fixar barra").
+### 2.3 Acessibilidade (Tooltips) ✅ Resolvido
+**O Problema:** Os botões de ação e ícones no topo (ex: Conta) não têm `aria-label`. Não há dicas claras com *hover*, o que prejudica a acessibilidade.
+**A Solução Documentada:** Adicionar `aria-labels` nos botões de ícone da Topbar. Implementar Tooltips nativos ou via Radix UI. Ao pairar o mouse em um ícone de Pin, mostrar a dica ("Fixar barra").
+*(Implementado via Radix UI Tooltip. Tooltip envolvido em componentes críticos de UI como edição de grifos, adicionado aria-labels no layout e Topbar)*
 
 ### 2.4 Leitura da Devolutiva da Inteligência Artificial ✅ Resolvido
 **O Problema:** A justificativa e as notas geradas pela IA eram renderizadas em um bloco de texto denso, com fonte pequena e pouco respiro, dificultando a distinção visual do corpo principal da redação e tornando a leitura cansativa.

@@ -87,6 +87,9 @@ export function Topbar() {
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
                         className="flex items-center gap-3 hover:bg-gray-50 p-1.5 pr-2 rounded-full transition-colors focus:outline-none"
+                        aria-label="Abrir menu de perfil"
+                        aria-haspopup="true"
+                        aria-expanded={isProfileOpen}
                     >
                         <div className="text-right hidden sm:block">
                             <p className="text-xs font-semibold text-dark-gray leading-none">
