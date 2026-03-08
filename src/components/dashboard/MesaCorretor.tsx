@@ -141,6 +141,9 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     // Accordion UI State
     const [activeCriterio, setActiveCriterio] = useState<number>(1);
 
+    // Readability State
+    const [readMode, setReadMode] = useState<boolean>(false);
+
     const getCriterioStatus = (criterioId: number) => {
         const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
         const t2 = (formData as any)[`criterio_${criterioId}_tema_2`];
@@ -972,8 +975,26 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Coluna da Esquerda: Leitura */}
-                <div className="w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:px-12 bg-white custom-scrollbar relative">
-                    <div className="w-full">
+                <div className={cn(
+                    "w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:px-12 custom-scrollbar relative transition-colors duration-500",
+                    readMode ? "bg-[#fdfcf8]" : "bg-white"
+                )}>
+                    <div className="w-full flex justify-end mb-4">
+                        <button
+                            onClick={() => setReadMode(!readMode)}
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full transition-colors border",
+                                readMode
+                                    ? "bg-stone-200 text-stone-700 border-stone-300 hover:bg-stone-300"
+                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
+                            )}
+                        >
+                            <BookOpen size={12} />
+                            {readMode ? "Modo Normal" : "Modo Leitura"}
+                        </button>
+                    </div>
+
+                    <div className="w-full mx-auto max-w-[70ch]">
                         {/* Barra Fixa (Estilo Word) */}
                         {toolbarMode === 'fixed' && (
                             <div className={cn(
@@ -1024,7 +1045,12 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         <div
                             ref={textContainerRef}
                             onMouseUp={handleTextSelection}
-                            className="text-lg text-gray-800 font-serif leading-loose whitespace-pre-wrap outline-none selection:bg-gray-200/60"
+                            className={cn(
+                                "font-serif whitespace-pre-wrap outline-none selection:bg-gray-200/60 transition-all duration-300",
+                                readMode
+                                    ? "text-xl text-stone-800 leading-[1.8]"
+                                    : "text-lg text-gray-800 leading-relaxed"
+                            )}
                         >
                             {renderTextWithHighlights(redacao.texto, false)}
                         </div>

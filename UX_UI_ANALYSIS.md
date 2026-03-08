@@ -27,12 +27,13 @@ Este documento contém uma auditoria profunda de Experiência do Usuário (UX) e
 
 ## 2. Pontos Críticos de UI (Interface do Usuário / Visual)
 
-### 2.1 Leitura Prolongada (Readability) e Fadiga Ocular
+### 2.1 Leitura Prolongada (Readability) e Fadiga Ocular ✅ Resolvido
 **O Problema:** Corretores leem redações o dia todo. O texto da redação está ocupando uma grande área branca.
-**A Solução:** 
+**A Solução Documentada:** 
 - Limitar a largura máxima da coluna de texto (`max-w-[70ch]`) da redação para o padrão ouro de leitura (cerca de 60-75 caracteres por linha). Linhas muito compridas geram fadiga visual.
 - Aumentar dinamicamente o `line-height` (entalrelinhas) para 1.6 ou 1.8 no corpo da redação.
 - Como "Wooooow Factor": Oferecer um botão rápido de *Modo Leitura / Modo Escuro (Dark Mode)* focado apenas na folha de redação para descansar a vista a noite.
+*(Implementado em MesaCorretor.tsx: Max-width 70ch + Botão "Modo Leitura" adicionado)*
 
 ### 2.2 Popover de Grifos (Anotações)
 **O Problema:** O corretor anota os grifos (amarelo, verde, vermelho) numa pequena caixa flutuante (`absolute`). Se o texto da observação for muito longo, a caixinha pode ficar desconfortável.
