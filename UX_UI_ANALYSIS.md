@@ -45,6 +45,13 @@ Este documento contém uma auditoria profunda de Experiência do Usuário (UX) e
 - Adicionar `aria-labels` nos botões de ícone da `Topbar`.
 - Implementar **Tooltips nativos ou via Radix UI**. Ao pairar o mouse em um ícone de `Pin`, mostrar a dica ("Fixar barra").
 
+### 2.4 Leitura da Devolutiva da Inteligência Artificial ✅ Resolvido
+**O Problema:** A justificativa e as notas geradas pela IA eram renderizadas em um bloco de texto denso, com fonte pequena e pouco respiro, dificultando a distinção visual do corpo principal da redação e tornando a leitura cansativa.
+**A Solução Documentada:**
+- Alterar a tipografia para Serif (combinando com a redação principal), elevar tamanho da fonte e altura da linha (line-height).
+- Aplicar um contêiner mais elegante (fundo com gradiente suave lilás/branco, bordas coloridas e maior respiro de padding) para evidenciar que é o bloco da IA.
+*(Implementado em MesaCorretor.tsx: classes de Tailwind atualizadas com gradient-to-b from-purple-50/40, text-[17px] e leading-[1.8])*
+
 ---
 
 ## 💡 Próximos Passos Imediatos de Alto Impacto
