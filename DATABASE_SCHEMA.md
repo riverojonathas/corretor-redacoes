@@ -14,6 +14,7 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `nome` | `text` | Nome completo do usuário |
 | `email` | `text` | E-mail do usuário |
 | `cargo` | `text` | Cargo ou função (ex: corretor, administrador) |
+| `primeiro_acesso` | `boolean` | Flag para exibição do popup de boas-vindas (default: true) |
 | `created_at` | `timestamptz` | Data de criação do perfil |
 
 ---

@@ -5,13 +5,14 @@ import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { WelcomePopup } from '../dashboard/WelcomePopup';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
 }
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
-    const { user, loading } = useAuth();
+    const { user, loading, primeiroAcesso, setPrimeiroAcesso } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
@@ -40,6 +41,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     {children}
                 </main>
             </div>
+            {primeiroAcesso && (
+                <WelcomePopup onClose={() => setPrimeiroAcesso(false)} />
+            )}
         </div>
     );
 }
