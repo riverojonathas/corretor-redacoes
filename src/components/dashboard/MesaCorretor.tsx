@@ -1165,7 +1165,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                     Devolutiva da Inteligência Artificial
                                                 </h4>
                                                 <div
-                                                    className="text-[16px] text-gray-700 leading-relaxed whitespace-pre-wrap selection:bg-accent-red/20 bg-gray-50/50 p-6 rounded-2xl border border-gray-100/50"
+                                                    className="text-[17px] font-serif text-gray-800 leading-[1.8] whitespace-pre-wrap selection:bg-purple-500/20 bg-gradient-to-b from-purple-50/40 to-white p-8 rounded-2xl border border-purple-100/60 shadow-sm"
                                                     data-devolutiva="true"
                                                     data-criterio-id={c.id}
                                                     onMouseUp={handleTextSelection}
