@@ -24,7 +24,7 @@ export function Topbar() {
         };
 
         if (parts.length === 0) {
-            return <Link href="/dashboard" className="text-dark-gray font-medium hover:text-blue-600 transition-colors">Dashboard</Link>;
+            return <Link href="/dashboard" className="text-dark-gray font-medium hover:text-gray-900 transition-colors">Dashboard</Link>;
         }
 
         return parts.map((part, index) => {
@@ -40,7 +40,7 @@ export function Topbar() {
                     {isLast ? (
                         <span className="text-dark-gray font-medium cursor-default">{label}</span>
                     ) : (
-                        <Link href={href} className="text-blue-500 hover:text-blue-700 underline transition-colors cursor-pointer relative z-50">
+                        <Link href={href} className="text-gray-500 hover:text-dark-gray transition-colors cursor-pointer relative z-50">
                             {label}
                         </Link>
                     )}
