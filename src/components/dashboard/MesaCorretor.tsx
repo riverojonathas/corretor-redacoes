@@ -96,7 +96,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const [highlights, setHighlights] = useState<Highlight[]>([]);
-    const [highlightPopup, setHighlightPopup] = useState<{ visible: boolean, x: number, y: number, start: number, end: number, text: string, target: 'texto' | 'devolutiva', targetId?: number } | null>(null);
+    const [highlightPopup, setHighlightPopup] = useState<{ visible: boolean, x: number, y: number, start: number, end: number, text: string, target: 'texto' | 'devolutiva', targetId?: number, editIndex?: number } | null>(null);
     const [highlightFormData, setHighlightFormData] = useState({ criterio_id: 1, cor: 'amarelo', observacao: '' });
     const [filterHighlightCriterio, setFilterHighlightCriterio] = useState<number | 'all'>('all');
 
@@ -486,7 +486,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         if (!highlightPopup) return;
 
         const newH: Highlight = {
-            criterio_id: highlightFormData.criterio_id,
+            criterio_id: highlightPopup.target === 'devolutiva' ? highlightPopup.targetId! : highlightFormData.criterio_id,
             cor: highlightFormData.cor,
             start_index: highlightPopup.start,
             end_index: highlightPopup.end,
@@ -495,7 +495,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             target: highlightPopup.target
         };
 
-        setHighlights([...highlights, newH]);
+        if (highlightPopup.editIndex !== undefined) {
+            const newHList = [...highlights];
+            newHList[highlightPopup.editIndex] = newH;
+            setHighlights(newHList);
+        } else {
+            setHighlights([...highlights, newH]);
+        }
+
         setHighlightPopup(null);
         setHighlightFormData({ criterio_id: 1, cor: 'amarelo', observacao: '' });
         window.getSelection()?.removeAllRanges();
@@ -506,6 +513,26 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         const newH = [...highlights];
         newH.splice(index, 1);
         setHighlights(newH);
+    };
+
+    const handleEditHighlight = (e: React.MouseEvent, index: number, h: Highlight) => {
+        e.stopPropagation();
+        setHighlightFormData({
+            criterio_id: h.criterio_id,
+            cor: h.cor,
+            observacao: h.observacao || ''
+        });
+        setHighlightPopup({
+            visible: true,
+            x: e.clientX,
+            y: e.clientY,
+            start: h.start_index,
+            end: h.end_index,
+            text: h.texto_marcado,
+            target: h.target || 'texto',
+            targetId: h.target === 'devolutiva' ? h.criterio_id : undefined,
+            editIndex: index
+        });
     };
 
     // Drag events for floating toolbar
@@ -595,7 +622,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col w-64 bg-gray-800 text-white text-xs rounded-xl p-3.5 z-10 shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
                             <span className="flex items-center justify-between mb-2 pb-2 border-b border-gray-700">
                                 <span className="font-bold flex items-center gap-1.5"><BookOpen size={12} /> Critério {h.criterio_id}</span>
-                                <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20"><X size={12} /></button>
+                                <div className="flex gap-1">
+                                    <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-400 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" title="Editar"><Highlighter size={12} /></button>
+                                    <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" title="Remover"><X size={12} /></button>
+                                </div>
                             </span>
                             <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-400">Sem observação.</i>}</span>
 
@@ -969,7 +999,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                         <option value="vermelho">Vermelho 🟥</option>
                                     </select>
                                     <input
-                                        required
                                         type="text"
                                         value={highlightFormData.observacao}
                                         onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
@@ -1019,17 +1048,19 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
                             <form onSubmit={handleAddHighlight} className="space-y-4">
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Critério Ref.</label>
-                                        <select
-                                            required
-                                            value={highlightFormData.criterio_id}
-                                            onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
-                                        >
-                                            {CRITERIOS.map(c => <option key={`hp-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                        </select>
-                                    </div>
+                                    {highlightPopup.target === 'texto' && (
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Critério Ref.</label>
+                                            <select
+                                                required
+                                                value={highlightFormData.criterio_id}
+                                                onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
+                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
+                                            >
+                                                {CRITERIOS.map(c => <option key={`hp-${c.id}`} value={c.id}>Critério {c.id}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
                                     <div>
                                         <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cor</label>
                                         <select
@@ -1048,7 +1079,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                 <div>
                                     <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Observação sobre o trecho grifado</label>
                                     <textarea
-                                        required
                                         rows={2}
                                         value={highlightFormData.observacao}
                                         onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
@@ -1125,14 +1155,24 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                         <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
                                                                         {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
                                                                     </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRemoveHighlight({ stopPropagation: () => { } } as any, highlights.indexOf(h))}
-                                                                        className="absolute top-3 right-3 text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity bg-white p-1.5 rounded-md hover:bg-red-50"
-                                                                        title="Remover Destaque"
-                                                                    >
-                                                                        <X size={16} />
-                                                                    </button>
+                                                                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)}
+                                                                            className="text-gray-300 hover:text-blue-500 bg-white p-1.5 rounded-md hover:bg-blue-50"
+                                                                            title="Editar Destaque"
+                                                                        >
+                                                                            <Highlighter size={16} />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))}
+                                                                            className="text-gray-300 hover:text-red-500 bg-white p-1.5 rounded-md hover:bg-red-50"
+                                                                            title="Remover Destaque"
+                                                                        >
+                                                                            <X size={16} />
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
                                                             ))}
                                                         </div>
