@@ -380,26 +380,39 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             if (finalRevisaoId) {
                 await supabase.from('revisao_destaques').delete().eq('revisao_id', finalRevisaoId);
                 if (highlights.length > 0) {
-                    const toInsert = highlights.map(h => ({
-                        revisao_id: finalRevisaoId,
-                        criterio_id: h.criterio_id,
-                        cor: h.cor,
-                        start_index: h.start_index,
-                        end_index: h.end_index,
-                        texto_marcado: h.texto_marcado,
-                        observacao: h.observacao,
-                        target: h.target || 'texto'
-                    }));
-                    await supabase.from('revisao_destaques').insert(toInsert);
+                    const toInsert = highlights.map(h => {
+                        const payload: any = {
+                            revisao_id: finalRevisaoId,
+                            criterio_id: h.criterio_id,
+                            cor: h.cor,
+                            start_index: h.start_index,
+                            end_index: h.end_index,
+                            texto_marcado: h.texto_marcado,
+                            observacao: h.observacao || ''
+                        };
+                        // Somente enviar target se de fato existir, para evitar erro se coluna não existir
+                        if (h.target) {
+                            payload.target = h.target;
+                        }
+                        return payload;
+                    });
+
+                    const { error: insertError } = await supabase.from('revisao_destaques').insert(toInsert);
+                    if (insertError) {
+                        console.error('Falha ao salvar destaques:', insertError);
+                        throw new Error('As avaliações foram salvas, mas os grifos falharam: ' + insertError.message);
+                    }
                 }
             }
 
             setMessage({ type: 'success', text: isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!' });
 
-            // Voltar pra lista após 2 segundos
-            setTimeout(() => {
-                setView('list');
-            }, 2000);
+            // Voltar pra lista apenas se estiver finalizando a revisão
+            if (!isDraft) {
+                setTimeout(() => {
+                    setView('list');
+                }, 2000);
+            }
 
         } catch (error: any) {
             console.error('Erro ao salvar:', JSON.stringify(error, null, 2), error);
