@@ -24,7 +24,8 @@ import {
     Move,
     ClipboardList,
     GraduationCap,
-    Save
+    Save,
+    Inbox
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -735,14 +736,31 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     {loadingLista ? (
-                        <div className="flex justify-center p-12">
-                            <Loader2 className="h-8 w-8 animate-spin text-accent-red" />
+                        <div className="divide-y divide-gray-100 animate-pulse">
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <div key={i} className="w-full flex items-center justify-between p-6">
+                                    <div className="flex-1 pr-4">
+                                        <div className="flex gap-2 mb-3">
+                                            <div className="h-5 w-24 bg-gray-100 rounded"></div>
+                                            <div className="h-5 w-20 bg-gray-100 rounded"></div>
+                                        </div>
+                                        <div className="h-6 w-3/4 bg-gray-100 rounded mb-4"></div>
+                                        <div className="flex gap-3">
+                                            <div className="h-5 w-32 bg-gray-100 rounded"></div>
+                                            <div className="h-5 w-40 bg-gray-100 rounded"></div>
+                                        </div>
+                                    </div>
+                                    <div className="h-6 w-6 bg-gray-100 rounded-full"></div>
+                                </div>
+                            ))}
                         </div>
                     ) : redacoesFiltradas.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-16 text-center">
-                            <CheckCircle2 className="h-12 w-12 text-gray-300 mb-4" />
-                            <h3 className="text-lg font-bold text-dark-gray">Nenhum resultado</h3>
-                            <p className="text-gray-500">Nenhuma redação encontrada com os filtros atuais.</p>
+                        <div className="flex flex-col items-center justify-center p-20 text-center animate-in fade-in duration-500">
+                            <div className="w-20 h-20 bg-gray-50 rounded-full flex flex-col items-center justify-center mb-6 border border-gray-100 shadow-sm">
+                                <Inbox className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
+                            </div>
+                            <h3 className="text-xl font-bold text-dark-gray mb-2">Fila Vazia</h3>
+                            <p className="text-gray-500 max-w-sm">Nenhuma redação foi encontrada com as configurações atuais. Tente remover os filtros ou aguarde novas submissões.</p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-100">
@@ -815,9 +833,63 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     if (loadingRedacao) {
         return (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-white">
-                <Loader2 className="h-10 w-10 animate-spin text-accent-red mb-4" />
-                <p className="text-gray-500 font-medium">Carregando dados da redação...</p>
+            <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden animate-pulse">
+                {/* Fake header */}
+                <div className="bg-white border-b border-gray-100 flex items-center justify-between px-8 py-5 shadow-sm z-10">
+                    <div className="flex flex-col gap-3">
+                        <div className="h-7 w-64 bg-gray-100 rounded"></div>
+                        <div className="h-4 w-40 bg-gray-100 rounded"></div>
+                    </div>
+                    <div className="flex gap-3">
+                        <div className="h-10 w-28 bg-gray-100 rounded-xl"></div>
+                        <div className="h-10 w-32 bg-gray-100 rounded-xl"></div>
+                    </div>
+                </div>
+
+                <div className="flex flex-1 overflow-hidden">
+                    {/* Fake left column - essay text */}
+                    <div className="w-1/2 border-r border-gray-100 p-8 lg:px-12 bg-[#fdfcf8]">
+                        <div className="w-full flex justify-end mb-8">
+                            <div className="h-8 w-32 bg-gray-100 rounded-full border border-gray-200"></div>
+                        </div>
+                        <div className="space-y-5 max-w-[70ch] mx-auto opacity-60">
+                            {[1, 2, 3, 4, 5, 6, 7].map(line => (
+                                <div key={line} className={`h-6 bg-gray-200 rounded-sm w-${[
+                                    'full', '11/12', 'full', '4/5', 'full', '10/12', '9/12'
+                                ][line - 1]}`}></div>
+                            ))}
+                            <div className="h-6 bg-transparent w-full"></div> {/* break */}
+                            {[8, 9, 10, 11, 12].map(line => (
+                                <div key={line} className={`h-6 bg-gray-200 rounded-sm w-${[
+                                    'full', '10/12', 'full', '11/12', '3/4'
+                                ][line - 8]}`}></div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Fake right column - corrections */}
+                    <div className="w-1/2 p-8 lg:px-12 bg-gray-50/50">
+                        {/* Fake Criterios bar */}
+                        <div className="flex bg-gray-100 p-1.5 rounded-lg space-x-2 mb-10 h-12 w-full"></div>
+
+                        <div className="h-8 w-56 bg-gray-100 rounded mb-3"></div>
+                        <div className="h-4 w-72 bg-gray-100 rounded mb-10"></div>
+
+                        {/* Fake Devolutiva IA */}
+                        <div className="h-4 w-60 bg-gray-100 rounded mb-5"></div>
+                        <div className="h-48 bg-gray-100 rounded-2xl w-full mb-12 border border-gray-200"></div>
+
+                        {/* Fake select inputs */}
+                        <div className="space-y-8">
+                            {[1, 2, 3].map(i => (
+                                <div key={i}>
+                                    <div className="h-4 w-48 bg-gray-100 rounded mb-3"></div>
+                                    <div className="h-14 bg-gray-100 rounded-xl w-full border border-gray-200"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

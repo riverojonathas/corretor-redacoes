@@ -16,13 +16,15 @@ Este documento contém uma auditoria profunda de Experiência do Usuário (UX) e
 **A Solução Documentada:** Migrar para um sistema moderno de Toast Notifications (ex: `sonner` ou `react-hot-toast`). Trazem animações mais ricas, empilhamento de múltiplas notificações e ícones sem esforço, dando um aspecto *Premium* à ferramenta.
 *(Implementado em MesaCorretor.tsx e layout.tsx: Adicionado biblioteca Sonner com Toaster global nativo rico em cores)*
 
-### 1.3 Loading States (Estados de Carregamento)
+### 1.3 Loading States (Estados de Carregamento) ✅ Resolvido
 **O Problema:** Durante buscas no Supabase, vemos um *spinner* ou bolinha girando. Uma tela branca com um *spinner* central causa a sensação psicológica de maior lentidão.
-**A Solução:** Implementar **Skeleton Loaders** (barras cinzas pulsantes com o formato do conteúdo que vai carregar). Ao abrir uma redação, mostrar falsas linhas de texto piscando até o texto real chegar.
+**A Solução Documentada:** Implementar **Skeleton Loaders** (barras cinzas pulsantes com o formato do conteúdo que vai carregar). Ao abrir uma redação, mostrar falsas linhas de texto piscando até o texto real chegar.
+*(Implementado em MesaCorretor.tsx: Adicionado `animate-pulse` com barras cinzas desenhadas simulando as redações e formulários. Spinner removido)*
 
-### 1.4 Empty States (Estados Vazios)
+### 1.4 Empty States (Estados Vazios) ✅ Resolvido
 **O Problema:** Se o corretor pesquisar um apelido e não achar nada (filtros ativos), ou se a fila de redação estiver zerada.
-**A Solução:** Criar componentes visuais de *Empty State*: uma ilustração bonita ou ícone amigável (ex: uma pasta vazia da biblioteca `lucide-react`) com a frase "Nenhuma redação encontrada" e um botão "Limpar Filtros".
+**A Solução Documentada:** Criar componentes visuais de *Empty State*: uma ilustração bonita ou ícone amigável (ex: uma pasta vazia da biblioteca `lucide-react`) com a frase "Nenhuma redação encontrada" e um botão "Limpar Filtros".
+*(Implementado em MesaCorretor.tsx: Ícone de `Inbox` grande e agradável adicionado com Fade-in e textos explicativos)*
 
 ---
 
