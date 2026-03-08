@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import {
     CheckCircle2,
     AlertCircle,
@@ -93,7 +94,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const [loadingRedacao, setLoadingRedacao] = useState(false);
     const [notFoundError, setNotFoundError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
     const [highlights, setHighlights] = useState<Highlight[]>([]);
     const [highlightPopup, setHighlightPopup] = useState<{ visible: boolean, x: number, y: number, start: number, end: number, text: string, target: 'texto' | 'devolutiva', targetId?: number, editIndex?: number } | null>(null);
@@ -209,7 +209,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const loadInitialAnswer = async (answerId: string) => {
         setLoadingRedacao(true);
         setNotFoundError(false);
-        setMessage(null);
 
         try {
             // First find the redacao by answer_id
@@ -247,7 +246,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         if (!user) return;
         setView('correction');
         setLoadingRedacao(true);
-        setMessage(null);
 
         try {
             // Busca os dados da redação
@@ -326,7 +324,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             }
         } catch (err) {
             console.error('Erro ao buscar redação:', err);
-            setMessage({ type: 'error', text: 'Erro ao carregar dados da redação.' });
+            toast.error('Erro ao carregar dados da redação.');
         } finally {
             setLoadingRedacao(false);
         }
@@ -337,7 +335,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         if (!redacao || !user) return;
 
         if (!isDraft && !isAllComplete) {
-            setMessage({ type: 'error', text: 'Preencha todos os campos obrigatórios para finalizar a revisão.' });
+            toast.error('Preencha todos os campos obrigatórios para finalizar a revisão.');
             return;
         }
 
@@ -404,7 +402,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 }
             }
 
-            setMessage({ type: 'success', text: isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!' });
+            toast.success(isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!');
 
             // Voltar pra lista apenas se estiver finalizando a revisão
             if (!isDraft) {
@@ -415,7 +413,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
         } catch (error: any) {
             console.error('Erro ao salvar:', JSON.stringify(error, null, 2), error);
-            setMessage({ type: 'error', text: 'Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido. Verifique o console.') });
+            toast.error('Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido. Verifique o console.'));
         } finally {
             setSubmitting(false);
         }
@@ -931,14 +929,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             <Star size={10} className={formData.favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
                             {formData.favorita ? 'Favorita' : 'Favoritar'}
                         </button>
-                        {message && (
-                            <div className={cn(
-                                "text-[10px] font-bold px-2 py-0.5 rounded transition-all",
-                                message.type === 'success' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                            )}>
-                                {message.text}
-                            </div>
-                        )}
                     </div>
 
                     <div className="flex bg-gray-100/80 p-0.5 rounded-lg space-x-1 border border-gray-200/50">

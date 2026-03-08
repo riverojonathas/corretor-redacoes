@@ -11,9 +11,10 @@ Este documento contém uma auditoria profunda de Experiência do Usuário (UX) e
 **O Problema:** A lista de redações (`view === 'list'`) é atualmente uma tabela (`<tr>`, `<td>`) densa. Usuários acessando por tablets menores ou celulares terão a tela "quebrada" ou precisarão de muito *scroll* horizontal.
 **A Solução:** Implementar um design híbrido. Em telas `md` ou maiores, mantém a tabela. Em telas menores (`sm` e `mobile`), renderizar a lista em um formato de **Cards** (onde cada card mostra o Nick no topo, o Status numa tag ao lado, e o tema na linha de baixo).
 
-### 1.2 Feedback Visual e *Toasts* de Notificação
+### 1.2 Feedback Visual e *Toasts* de Notificação ✅ Resolvido
 **O Problema:** As mensagens de sucesso/erro (ao salvar rascunho ou finalizar a revisão) utilizam um estado simples de `message` que aparece em uma barra. Pode passar despercebido se a tela estiver rolada (embora já utilize posição fixa).
-**A Solução:** Migrar para um sistema moderno de Toast Notifications (ex: `sonner` ou `react-hot-toast`). Trazem animações mais ricas, empilhamento de múltiplas notificações e ícones sem esforço, dando um aspecto *Premium* à ferramenta.
+**A Solução Documentada:** Migrar para um sistema moderno de Toast Notifications (ex: `sonner` ou `react-hot-toast`). Trazem animações mais ricas, empilhamento de múltiplas notificações e ícones sem esforço, dando um aspecto *Premium* à ferramenta.
+*(Implementado em MesaCorretor.tsx e layout.tsx: Adicionado biblioteca Sonner com Toaster global nativo rico em cores)*
 
 ### 1.3 Loading States (Estados de Carregamento)
 **O Problema:** Durante buscas no Supabase, vemos um *spinner* ou bolinha girando. Uma tela branca com um *spinner* central causa a sensação psicológica de maior lentidão.
