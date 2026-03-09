@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Upload, Settings, LogOut, FileText, Edit3 } from 'lucide-react';
+import { LayoutDashboard, Upload, Settings, LogOut, Edit3, Users, HelpCircle, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
@@ -14,7 +14,12 @@ export function Sidebar() {
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
         { icon: Edit3, label: 'Birô de Revisão', href: '/dashboard/revisao' },
-        ...(cargo === 'admin' ? [{ icon: Upload, label: 'Upload', href: '/admin/upload' }] : []),
+        ...(cargo === 'admin' ? [
+            { icon: Users, label: 'Usuários', href: '/admin/users' },
+            { icon: Inbox, label: 'Feedbacks', href: '/admin/feedbacks' },
+            { icon: Upload, label: 'Upload', href: '/admin/upload' }
+        ] : []),
+        { icon: HelpCircle, label: 'Central de Ajuda', href: '/ajuda' },
         { icon: Settings, label: 'Configurações', href: '/settings' },
     ];
 

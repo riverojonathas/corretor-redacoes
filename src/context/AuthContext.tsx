@@ -9,10 +9,12 @@ interface AuthContextType {
     user: User | null;
     cargo: string | null;
     nome: string | null;
+    avatarUrl: string | null;
     primeiroAcesso: boolean;
     setPrimeiroAcesso: (val: boolean) => void;
     loading: boolean;
     signOut: () => Promise<void>;
+    refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -20,10 +22,12 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     cargo: null,
     nome: null,
+    avatarUrl: null,
     primeiroAcesso: false,
     setPrimeiroAcesso: () => { },
     loading: true,
     signOut: async () => { },
+    refreshProfile: async () => { },
 });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -31,6 +35,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [user, setUser] = useState<User | null>(null);
     const [cargo, setCargo] = useState<string | null>(null);
     const [nome, setNome] = useState<string | null>(null);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
     const [primeiroAcesso, setPrimeiroAcesso] = useState<boolean>(false);
     const [loading, setLoading] = useState(true);
     const fetchingCargo = React.useRef(false);
@@ -43,13 +48,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         try {
             const { data, error } = await supabase
                 .from('perfis')
-                .select('cargo, primeiro_acesso, nome')
+                .select('cargo, primeiro_acesso, nome, avatar_url')
                 .eq('id', userId)
                 .single();
 
             if (!error && data) {
                 setCargo(data.cargo?.trim() || null);
                 setNome(data.nome?.trim() || null);
+                setAvatarUrl(data.avatar_url?.trim() || null);
 
                 // Fallback: se o DB falhou em salvar (ex: erro silencioso de RLS), conferimos o lock local
                 const hasSeenLocal = typeof window !== 'undefined' ? localStorage.getItem(`onboarding_dismissed_${userId}`) : null;
@@ -63,6 +69,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             }
         } finally {
             fetchingCargo.current = false;
+        }
+    };
+
+    const refreshProfile = async () => {
+        if (user) {
+            await fetchCargo(user.id);
         }
     };
 
@@ -106,6 +118,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             if (event === 'SIGNED_OUT') {
                 setCargo(null);
                 setNome(null);
+                setAvatarUrl(null);
                 setPrimeiroAcesso(false);
             } else if (session?.user && event === 'SIGNED_IN') {
                 fetchCargo(session.user.id).catch(console.error);
@@ -123,7 +136,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ session, user, cargo, nome, primeiroAcesso, setPrimeiroAcesso, loading, signOut }}>
+        <AuthContext.Provider value={{ session, user, cargo, nome, avatarUrl, primeiroAcesso, setPrimeiroAcesso, loading, signOut, refreshProfile }}>
             {children}
         </AuthContext.Provider>
     );

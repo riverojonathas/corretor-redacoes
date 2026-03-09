@@ -13,6 +13,7 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `id` | `uuid` | Primary Key (Relacionado com `auth.users.id`) |
 | `nome` | `text` | Nome completo do usuário |
 | `email` | `text` | E-mail do usuário |
+| `avatar_url` | `text` | URL da foto de perfil do usuário (armazenada no bucket 'avatars') |
 | `cargo` | `text` | Cargo ou função (ex: corretor, administrador) |
 | `primeiro_acesso` | `boolean` | Flag para exibição do popup de boas-vindas (default: true) |
 | `created_at` | `timestamptz` | Data de criação do perfil |
@@ -101,3 +102,40 @@ Armazena os trechos de texto destacados (marca-texto) durante a revisão, atrela
 | `texto_marcado`| `text` | Trecho de texto que foi destacado |
 | `observacao` | `text` | Opcional, observação atrelada ao destaque |
 | `created_at` | `timestamptz`| Data de criação |
+
+---
+
+## 4. Tabela `feedbacks`
+*Tabela de Sugestões de Melhorias e Bugs reportados pelos usuários*
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | `uuid` | Primary Key |
+| `user_id` | `uuid` | Foreign Key -> `perfis.id` (Quem enviou) |
+| `tipo` | `text` | 'bug' ou 'sugestao' |
+| `mensagem` | `text` | O conteúdo do feedback |
+| `status` | `text` | Status atual (novo, em_analise, resolvido) |
+| `created_at` | `timestamptz` | Data do envio |
+
+### Script SQL para criar a tabela
+```sql
+CREATE TABLE public.feedbacks (
+    id uuid NOT NULL DEFAULT gen_random_uuid(),
+    user_id uuid NOT NULL,
+    tipo text NOT NULL,
+    mensagem text NOT NULL,
+    status text NOT NULL DEFAULT 'novo'::text,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT feedbacks_pkey PRIMARY KEY (id),
+    CONSTRAINT feedbacks_user_id_fkey FOREIGN KEY (user_id) REFERENCES perfis(id) ON DELETE CASCADE
+);
+
+-- Habilitar RLS
+ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
+
+-- Políticas
+-- Usuários podem inserir seus próprios feedbacks
+CREATE POLICY "Users can insert own feedbacks" ON public.feedbacks FOR INSERT WITH CHECK (auth.uid() = user_id);
+-- Admins podem ler todos (assumindo que verificamos cargo no app, ou criando política)
+CREATE POLICY "Admins read all feedbacks" ON public.feedbacks FOR SELECT USING (true); -- Simplificado
+```

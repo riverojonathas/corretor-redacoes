@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { FileText, PlusCircle, BarChart3, Clock, CheckCircle2, BookOpen } from 'lucide-react';
+import { FileText, PlusCircle, BarChart3, Clock, CheckCircle2, BookOpen, Upload, Inbox, HelpCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 
 interface Stats {
@@ -16,7 +16,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, cargo } = useAuth();
     const router = useRouter();
     const [stats, setStats] = useState<Stats | null>(null);
     const [loadingStats, setLoadingStats] = useState(true);
@@ -154,19 +154,38 @@ export default function DashboardPage() {
                 {/* Secundary Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Ações Rápidas */}
-                    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full">
                         <h2 className="text-xl font-bold text-dark-gray mb-6">Ações Rápidas</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <button className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group">
-                                <PlusCircle className="text-gray-400 group-hover:text-accent-red mb-3" size={24} />
-                                <span className="font-semibold text-dark-gray">Nova Redação</span>
-                                <span className="text-xs text-gray-500 mt-1 text-left">Envie um texto para correção imediata.</span>
-                            </button>
-                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group">
-                                <FileText className="text-gray-400 group-hover:text-accent-red mb-3" size={24} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                            {/* Ações para Corretores (Visualizado por todos) */}
+                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group h-full">
+                                <FileText className="text-gray-400 group-hover:text-accent-red mb-3 transition-colors shrink-0" size={24} />
                                 <span className="font-semibold text-dark-gray">Birô de Revisão</span>
-                                <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para corrigir ou revisar redações.</span>
+                                <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para analisar textos e atribuir notas finais às redações pendentes.</span>
                             </button>
+
+                            <button onClick={() => router.push('/ajuda')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-emerald-600 hover:bg-emerald-50 transition-all group h-full">
+                                <HelpCircle className="text-gray-400 group-hover:text-emerald-600 mb-3 transition-colors shrink-0" size={24} />
+                                <span className="font-semibold text-dark-gray">Central de Ajuda</span>
+                                <span className="text-xs text-gray-500 mt-1 text-left">Ficou com dúvida nas ferramentas? Clicando aqui você também tem as últimas novidades.</span>
+                            </button>
+
+                            {/* Ações Específicas de Administrador */}
+                            {cargo === 'admin' && (
+                                <>
+                                    <button onClick={() => router.push('/admin/upload')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-purple-600 hover:bg-purple-50 transition-all group h-full">
+                                        <Upload className="text-gray-400 group-hover:text-purple-600 mb-3 transition-colors shrink-0" size={24} />
+                                        <span className="font-semibold text-dark-gray">Upload de Textos</span>
+                                        <span className="text-xs text-gray-500 mt-1 text-left">Adicione novos lotes de redação (já pré-avaliados pela IA) subindo um arquivo CSV estruturado.</span>
+                                    </button>
+
+                                    <button onClick={() => router.push('/admin/feedbacks')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-blue-600 hover:bg-blue-50 transition-all group h-full">
+                                        <Inbox className="text-gray-400 group-hover:text-blue-600 mb-3 transition-colors shrink-0" size={24} />
+                                        <span className="font-semibold text-dark-gray">Ver Feedback UI/UX</span>
+                                        <span className="text-xs text-gray-500 mt-1 text-left">Caixa de entrada com logs de Bugs reportados pela equipe e propostas de funcionalidades.</span>
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
 

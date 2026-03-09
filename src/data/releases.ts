@@ -1,0 +1,65 @@
+export type ReleaseCategory = 'nova-feature' | 'melhoria' | 'bugfix';
+
+export interface ReleaseNote {
+    id: string;
+    version: string;
+    date: string;
+    title: string;
+    description: string;
+    category: ReleaseCategory;
+}
+
+export interface FeaturePill {
+    id: string;
+    title: string;
+    shortDescription: string;
+    fullDescription: string;
+    icon: string; // The name of a lucide-react icon
+    colorClass: string;
+}
+
+export const EXAMPLES_FEATURES: FeaturePill[] = [
+    {
+        id: 'ai-assessment',
+        title: 'IA Avaliadora (Beta)',
+        shortDescription: 'Avaliações baseadas em critérios do ENEM com precisão.',
+        fullDescription: 'Nossa Inteligência Artificial sugere correções avançadas com base nas 5 competências do ENEM, ela é constantemente treinada para melhorar a cada dia. Ela atualmente é capaz de avaliar estrutura, aprofundamento sociológico e desvios gramaticais. Como corretor, seu papel é revisar e garantir que nossas correções estejam de acordo com a qualidade da correção. Caso discorde de algum ponto, sinta-se livre destacar trechos e inserir observações. Através do seu trabalho será possível evoluir nossa Inteligência do jeito certo.',
+        icon: 'Sparkles',
+        colorClass: 'bg-purple-50 text-purple-600 border-purple-100',
+    },
+    {
+        id: 'highlight',
+        title: 'Marca-texto & Comentários',
+        shortDescription: 'Destaque trechos e atrele correções facilmente.',
+        fullDescription: 'Ao corrigir uma redação, basta selecionar um trecho do texto do aluno para criar um destaque visual (Highlight) e adicionar um "balão" flutuante de observação atrelado exatamente àquele trecho.',
+        icon: 'Pencil',
+        colorClass: 'bg-accent-red/10 text-accent-red border-accent-red/20',
+    },
+    {
+        id: 'smart-filters',
+        title: 'Filtros Dinâmicos',
+        shortDescription: 'Ache a redação que você quer corrigir em segundos.',
+        fullDescription: 'O botão "Filtros e Busca" na Mesa do Corretor permite que você encontre textos pendentes (Corrigir Agora), em revisão. Excelente para organizar seu fluxo de trabalho.',
+        icon: 'Search',
+        colorClass: 'bg-blue-50 text-blue-600 border-blue-100',
+    },
+    {
+        id: 'reading-mode',
+        title: 'Modo Foco e Layout Limpo',
+        shortDescription: 'Cores que descansam os olhos e espaço expandido.',
+        fullDescription: 'Para longas jornadas de correção, removemos todas as distrações visuais da tela. A coluna da redação ganhou um fundo "envelhecido" (papel) ameno, e a tabela de correção fica fixa na tela de maneira elegante.',
+        icon: 'Eye',
+        colorClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+    }
+];
+
+export const EXAMPLES_RELEASES: ReleaseNote[] = [
+    {
+        id: 'v1.0',
+        version: 'v1.0',
+        date: 'Março 2026',
+        title: 'Lançamento do sistema de revisão de redações',
+        description: 'Lançamento do sistema de revisão de redações com marca-texto e comentários, filtros dinâmicos e modo foco.',
+        category: 'nova-feature'
+    }
+];

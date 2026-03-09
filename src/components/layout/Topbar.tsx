@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { User, ChevronDown, LogOut, Key, HelpCircle } from 'lucide-react';
 
 export function Topbar() {
-    const { user, cargo, nome, signOut, setPrimeiroAcesso } = useAuth();
+    const { user, cargo, nome, avatarUrl, signOut, setPrimeiroAcesso } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -108,8 +108,12 @@ export function Topbar() {
                                 {cargo || 'Membro'}
                             </p>
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-dark-gray">
-                            <User size={16} />
+                        <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden text-dark-gray shrink-0">
+                            {avatarUrl ? (
+                                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                <User size={16} />
+                            )}
                         </div>
                         <ChevronDown size={14} className={`text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -145,7 +149,7 @@ export function Topbar() {
                         </div>
                     )}
                 </div>
-            </div>
-        </header>
+            </div >
+        </header >
     );
 }
