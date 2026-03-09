@@ -35,90 +35,66 @@ export interface Database {
             redacoes: {
                 Row: {
                     id: string
-                    data_base: string | null
-                    id_redacao: string | null
-                    model_id: string | null
-                    task_id: string | null
-                    answer_id: string | null
-                    question_id: string | null
+                    internal_id: string | null
                     external_id: string | null
+                    task_id: string | null
+                    question_id: string | null
+                    answer_id: string | null
                     nick: string | null
-                    nr_serie: string | null
-                    cd_tipo_ensino: string | null
-                    nm_tipo_ensino: string | null
-                    titulo: string | null
-                    texto: string | null
-                    criterio_1_nota: number | null
-                    criterio_1_devolutiva: string | null
-                    criterio_2_nota: number | null
-                    criterio_2_devolutiva: string | null
-                    criterio_3_nota: number | null
-                    criterio_3_devolutiva: string | null
-                    criterio_4_nota: number | null
-                    criterio_4_devolutiva: string | null
-                    criterio_5_nota: number | null
-                    criterio_5_devolutiva: string | null
-                    nota_geral: number | null
-                    comentario_geral: string | null
+                    title: string | null
+                    essay: string | null
+                    genre: string | null
+                    statement: string | null
+                    support_text: string | null
+                    consumer_init: string | null
+                    consumer_finish: string | null
+                    evaluated_skills: Json | null
+                    assessed_skills: Json | null
+                    extra_fields: Json | null
                     created_at: string
+                    updated_at: string | null
                 }
                 Insert: {
                     id?: string
-                    data_base?: string | null
-                    id_redacao?: string | null
-                    model_id?: string | null
-                    task_id?: string | null
-                    answer_id?: string | null
-                    question_id?: string | null
+                    internal_id?: string | null
                     external_id?: string | null
+                    task_id?: string | null
+                    question_id?: string | null
+                    answer_id?: string | null
                     nick?: string | null
-                    nr_serie?: string | null
-                    cd_tipo_ensino?: string | null
-                    nm_tipo_ensino?: string | null
-                    titulo?: string | null
-                    texto?: string | null
-                    criterio_1_nota?: number | null
-                    criterio_1_devolutiva?: string | null
-                    criterio_2_nota?: number | null
-                    criterio_2_devolutiva?: string | null
-                    criterio_3_nota?: number | null
-                    criterio_3_devolutiva?: string | null
-                    criterio_4_nota?: number | null
-                    criterio_4_devolutiva?: string | null
-                    criterio_5_nota?: number | null
-                    criterio_5_devolutiva?: string | null
-                    nota_geral?: number | null
-                    comentario_geral?: string | null
+                    title?: string | null
+                    essay?: string | null
+                    genre?: string | null
+                    statement?: string | null
+                    support_text?: string | null
+                    consumer_init?: string | null
+                    consumer_finish?: string | null
+                    evaluated_skills?: Json | null
+                    assessed_skills?: Json | null
+                    extra_fields?: Json | null
                     created_at?: string
+                    updated_at?: string | null
                 }
                 Update: {
                     id?: string
-                    data_base?: string | null
-                    id_redacao?: string | null
-                    model_id?: string | null
-                    task_id?: string | null
-                    answer_id?: string | null
-                    question_id?: string | null
+                    internal_id?: string | null
                     external_id?: string | null
+                    task_id?: string | null
+                    question_id?: string | null
+                    answer_id?: string | null
                     nick?: string | null
-                    nr_serie?: string | null
-                    cd_tipo_ensino?: string | null
-                    nm_tipo_ensino?: string | null
-                    titulo?: string | null
-                    texto?: string | null
-                    criterio_1_nota?: number | null
-                    criterio_1_devolutiva?: string | null
-                    criterio_2_nota?: number | null
-                    criterio_2_devolutiva?: string | null
-                    criterio_3_nota?: number | null
-                    criterio_3_devolutiva?: string | null
-                    criterio_4_nota?: number | null
-                    criterio_4_devolutiva?: string | null
-                    criterio_5_nota?: number | null
-                    criterio_5_devolutiva?: string | null
-                    nota_geral?: number | null
-                    comentario_geral?: string | null
+                    title?: string | null
+                    essay?: string | null
+                    genre?: string | null
+                    statement?: string | null
+                    support_text?: string | null
+                    consumer_init?: string | null
+                    consumer_finish?: string | null
+                    evaluated_skills?: Json | null
+                    assessed_skills?: Json | null
+                    extra_fields?: Json | null
                     created_at?: string
+                    updated_at?: string | null
                 }
             }
             revisoes: {

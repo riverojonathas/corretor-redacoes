@@ -28,7 +28,7 @@ export default function DashboardPage() {
                 // 1. Busca todas as redacoes para calcular totais, modelos, e médias
                 const { data: redacoes } = await supabase
                     .from('redacoes')
-                    .select('id, titulo, nr_serie, criterio_1_nota, criterio_2_nota, criterio_3_nota, criterio_4_nota, criterio_5_nota');
+                    .select('id, title, extra_fields, evaluated_skills');
 
                 // 2. Busca todas as revisões feitas
                 const { count: revisoesCount } = await supabase
@@ -42,7 +42,7 @@ export default function DashboardPage() {
 
                 // Processamento de dados
                 const totalRedacoes = redacoes.length;
-                const totalModelos = new Set(redacoes.map((r: any) => r.titulo?.trim())).size;
+                const totalModelos = new Set(redacoes.map((r: any) => r.title?.trim())).size;
                 const totalRevisoes = revisoesCount || 0;
 
                 let sumGeral = 0;
@@ -51,15 +51,14 @@ export default function DashboardPage() {
                 const seriesData: Record<string, { sum: number, count: number }> = {};
 
                 redacoes.forEach((r: any) => {
-                    const notaTotal = (r.criterio_1_nota || 0) + (r.criterio_2_nota || 0) +
-                        (r.criterio_3_nota || 0) + (r.criterio_4_nota || 0) +
-                        (r.criterio_5_nota || 0);
+                    const skills = r.evaluated_skills || [];
+                    const notaTotal = skills.reduce((sum: number, s: any) => sum + (s.score || 0), 0);
 
                     if (notaTotal > 0) { // Assume redação zerada se n tiver nota, mas pra média é melhor considerar só se tiver > 0 (ou considerar tudo, depende. Vamos considerar todas as redacoes)
                         sumGeral += notaTotal;
                         countGeral++;
 
-                        const serie = r.nr_serie?.trim() || 'Outros';
+                        const serie = r.extra_fields?.redacao_ano_serie?.trim() || 'Outros';
                         if (!seriesData[serie]) {
                             seriesData[serie] = { sum: 0, count: 0 };
                         }

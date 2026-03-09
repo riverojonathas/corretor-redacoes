@@ -26,33 +26,24 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
 | `id` | `uuid` | Primary Key |
-| `data_base` | `text` | Data base da redação |
-| `id_redacao` | `text` | ID da redação |
-| `model_id` | `text` | ID do modelo da proposta/tarefa |
-| `titulo_modelo`| `text` | Título / Tema da proposta/tarefa |
-| `task_id` | `text` | ID da tarefa |
-| `answer_id` | `text` | ID da resposta |
-| `question_id` | `text` | ID da questão |
+| `internal_id` | `text` | ID da redação interno (`id_redacao` original) |
 | `external_id` | `text` | ID externo |
-| `nick` | `text` | apelido do aluno |
-| `nr_serie` | `text` | Série/Ano |
-| `cd_tipo_ensino`| `text` | Código do tipo de ensino |
-| `nm_tipo_ensino`| `text` | Nome do tipo de ensino |
-| `titulo` | `text` | Título da redação |
-| `texto` | `text` | Texto integral da redação |
-| `criterio_1_nota`| `numeric` | Nota do critério 1 |
-| `criterio_1_devolutiva`| `text` | Devolutiva do critério 1 |
-| `criterio_2_nota`| `numeric` | Nota do critério 2 |
-| `criterio_2_devolutiva`| `text` | Devolutiva do critério 2 |
-| `criterio_3_nota`| `numeric` | Nota do critério 3 |
-| `criterio_3_devolutiva`| `text` | Devolutiva do critério 3 |
-| `criterio_4_nota`| `numeric` | Nota do critério 4 |
-| `criterio_4_devolutiva`| `text` | Devolutiva do critério 4 |
-| `criterio_5_nota`| `numeric` | Nota do critério 5 |
-| `criterio_5_devolutiva`| `text` | Devolutiva do critério 5 |
-| `nota_geral` | `numeric` | Soma das notas ou média |
-| `comentario_geral`| `text` | Comentário geral da IA |
-| `created_at` | `timestamptz` | Data de ingestão |
+| `task_id` | `text` | ID da tarefa |
+| `question_id` | `text` | ID da questão |
+| `answer_id` | `text` | ID da resposta |
+| `nick` | `text` | Apelido do aluno |
+| `title` | `text` | Título da redação |
+| `essay` | `text` | Texto integral da redação |
+| `genre` | `text` | Gênero da redação |
+| `statement` | `text` | Enunciado/Proposta da redação |
+| `support_text` | `text` | Texto de apoio/coletânea |
+| `consumer_init` | `timestamptz` | Início do consumo |
+| `consumer_finish` | `timestamptz`| Fim do consumo |
+| `evaluated_skills` | `jsonb` | Notas e comentários da IA (Array: {score, comment, statement}) |
+| `assessed_skills`  | `jsonb` | Habilidades avaliadas, descrições e instruções da IA |
+| `extra_fields` | `jsonb` | Metadados extras (ex: `redacao_tema`, `redacao_ano_serie`, `redacao_zerada`) |
+| `created_at` | `timestamptz` | Data de ingestão / Data do registro base (`createdAt`) |
+| `updated_at` | `timestamptz` | Data de atualização original (`updatedAt`) |
 
 ---
 

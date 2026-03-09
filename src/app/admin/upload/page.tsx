@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
 import Papa from 'papaparse';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Upload as UploadIcon, Info, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -35,12 +34,64 @@ export default function AdminUploadPage() {
             skipEmptyLines: true,
             complete: async (results) => {
                 try {
-                    const formattedData = results.data.map((row: any) => {
-                        const newRow: any = {};
-                        Object.keys(row).forEach(key => {
-                            newRow[key.toLowerCase().trim()] = row[key];
-                        });
-                        return newRow;
+                    const formattedData = results.data.map((rawRow: any) => {
+                        const row: any = {};
+                        Object.keys(rawRow).forEach(k => { row[k.trim()] = rawRow[k]; });
+
+                        function parseNota(notaStr?: string): number {
+                            if (!notaStr) return 0;
+                            const normalized = String(notaStr).replace(',', '.');
+                            const num = parseFloat(normalized);
+                            return isNaN(num) ? 0 : num;
+                        }
+
+                        const evaluated_skills = [];
+                        for (let i = 0; i < 5; i++) {
+                            evaluated_skills.push({
+                                score: parseNota(row[`evaluated_skills[${i}].score`]),
+                                comment: row[`evaluated_skills[${i}].comment`] || '',
+                                statement: row[`evaluated_skills[${i}].statement`] || ''
+                            });
+                        }
+
+                        const assessed_skills = [];
+                        for (let i = 0; i < 5; i++) {
+                            if (row[`assessed_skills[${i}].statement`] || row[`assessed_skills[${i}].description`]) {
+                                assessed_skills.push({
+                                    statement: row[`assessed_skills[${i}].statement`] || '',
+                                    description: row[`assessed_skills[${i}].description`] || ''
+                                });
+                            }
+                        }
+
+                        const extra_fields = {
+                            redacao_tema: row['extra_fields.redacao_tema'] || '',
+                            redacao_ano_serie: row['extra_fields.redacao_ano_serie'] || '',
+                            redacao_zerada: row['extra_fields.redacao_zerada'] || '',
+                            cd_tipo_ensino: row['extra_fields.cd_tipo_ensino'] || '',
+                            nm_tipo_ensino: row['extra_fields.nm_tipo_ensino'] || ''
+                        };
+
+                        return {
+                            internal_id: row.internal_id || row.id_redacao,
+                            external_id: row.external_id,
+                            task_id: row.task_id,
+                            question_id: row.question_id,
+                            answer_id: row.answer_id,
+                            nick: row.nick,
+                            title: row.title || row.titulo,
+                            essay: row.essay || row.texto,
+                            genre: row.genre,
+                            statement: row['evaluated_skills[0].statement'] || row.statement || '',
+                            support_text: row.support_text || '',
+                            consumer_init: row.ConsumerInit ? new Date(row.ConsumerInit).toISOString() : null,
+                            consumer_finish: row.ConsumerFinish ? new Date(row.ConsumerFinish).toISOString() : null,
+                            created_at: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+                            updated_at: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+                            evaluated_skills,
+                            assessed_skills,
+                            extra_fields
+                        };
                     });
 
                     if (formattedData.length === 0) {
@@ -49,15 +100,22 @@ export default function AdminUploadPage() {
                         return;
                     }
 
-                    const { error } = await supabase
-                        .from('redacoes')
-                        .insert(formattedData);
+                    // Envia para a API Route que usa service_role key (bypassa RLS)
+                    const response = await fetch('/api/admin/import', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ rows: formattedData }),
+                    });
 
-                    if (error) throw error;
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.error || 'Erro desconhecido na importação.');
+                    }
 
                     setMessage({
                         type: 'success',
-                        text: `${formattedData.length} redações importadas com sucesso!`
+                        text: `${result.insertedCount} redações importadas com sucesso!`
                     });
                 } catch (error: any) {
                     setMessage({ type: 'error', text: `Erro na importação: ${error.message}` });
@@ -169,20 +227,18 @@ export default function AdminUploadPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100 bg-white">
-                                        <tr><td className="p-3 font-mono text-dark-gray">data_base</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Data base da redação</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">id_redacao</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID originial da redação</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">model_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID do modelo da proposta/tarefa</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">internal_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID originial da redação</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">task_id / answer_id / question_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">IDs de controle e origem</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">external_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID externo (ex: plataforma parceira)</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">nick</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Apelido do aluno</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">nr_serie</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Série/Ano do aluno</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">cd_tipo_ensino / nm_tipo_ensino</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Código e Nome do tipo de ensino</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">titulo</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Título da redação</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">texto</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Texto integral da redação (Importante)</td></tr>
-                                        <tr><td className="p-3 font-mono text-accent-red">criterio_[1-5]_nota</td><td className="p-3 text-gray-500">Numérico</td><td className="p-3 text-gray-600">Nota da IA para cada um dos 5 critérios</td></tr>
-                                        <tr><td className="p-3 font-mono text-accent-red">criterio_[1-5]_devolutiva</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Texto da devolutiva/avaliação da IA por critério</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">nota_geral</td><td className="p-3 text-gray-500">Numérico</td><td className="p-3 text-gray-600">Soma ou Média Geral das notas</td></tr>
-                                        <tr><td className="p-3 font-mono text-dark-gray">comentario_geral</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Comentário final que a IA deu para toda a redação</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">title</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Título da redação</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">essay</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Texto integral da redação (Importante)</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">genre</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Gênero textual</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">statement</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Enunciado / Tema</td></tr>
+                                        <tr><td className="p-3 font-mono text-accent-red">evaluated_skills</td><td className="p-3 text-gray-500">JSON</td><td className="p-3 text-gray-600">Array JSON com as notas e comentários de cada competência</td></tr>
+                                        <tr><td className="p-3 font-mono text-accent-red">assessed_skills</td><td className="p-3 text-gray-500">JSON</td><td className="p-3 text-gray-600">Aray JSON com descrição e instruções das métricas avaliadas</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">extra_fields</td><td className="p-3 text-gray-500">JSON</td><td className="p-3 text-gray-600">JSON com ano, série, e outros metadados extras</td></tr>
+
                                     </tbody>
                                 </table>
                             </div>

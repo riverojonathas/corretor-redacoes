@@ -32,20 +32,16 @@ import { cn } from '@/lib/utils';
 
 interface Redacao {
     id: string;
+    internal_id: string;
     nick: string;
-    nr_serie: string;
-    titulo: string;
-    texto: string;
-    criterio_1_nota: number;
-    criterio_1_devolutiva: string;
-    criterio_2_nota: number;
-    criterio_2_devolutiva: string;
-    criterio_3_nota: number;
-    criterio_3_devolutiva: string;
-    criterio_4_nota: number;
-    criterio_4_devolutiva: string;
-    criterio_5_nota: number;
-    criterio_5_devolutiva: string;
+    title: string;
+    essay: string;
+    genre: string;
+    statement: string;
+    support_text: string;
+    evaluated_skills?: { score: number; comment: string; statement?: string }[];
+    assessed_skills?: { statement: string; description: string }[];
+    extra_fields?: { redacao_tema?: string; redacao_ano_serie: string; cd_tipo_ensino?: string; nm_tipo_ensino?: string };
 }
 
 interface RedacaoListItem {
@@ -166,7 +162,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         try {
             const { data: redacoes, error } = await supabase
                 .from('redacoes')
-                .select('id, titulo, nick, nr_serie, model_id, titulo_modelo, nm_tipo_ensino, answer_id, revisoes(id, corretor_id, favorita, status)')
+                .select('id, title, nick, extra_fields, answer_id, revisoes(id, corretor_id, favorita, status)')
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
@@ -174,14 +170,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             if (redacoes) {
                 const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
                     const rev = r.revisoes?.find((rev: any) => rev.corretor_id === user.id);
+                    const extras = r.extra_fields || {};
                     return {
                         id: r.id,
-                        titulo: r.titulo || 'Sem Título',
+                        titulo: r.title || 'Sem Título',
                         nick: r.nick,
-                        nr_serie: r.nr_serie,
-                        model_id: r.model_id,
-                        titulo_modelo: r.titulo_modelo,
-                        nm_tipo_ensino: r.nm_tipo_ensino,
+                        nr_serie: extras.redacao_ano_serie,
+                        titulo_modelo: extras.redacao_tema,
+                        nm_tipo_ensino: extras.nm_tipo_ensino,
                         answer_id: r.answer_id,
                         status: rev ? (rev.status || 'concluida') : 'pendente',
                         revisao_id: rev?.id,
@@ -960,11 +956,11 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             <UserIcon size={14} />
                             <span className="text-[11px] font-bold uppercase tracking-widest text-dark-gray">{redacao.nick}</span>
                             <span className="text-gray-200">|</span>
-                            <span className="text-[11px] font-medium">{redacao.nr_serie}</span>
+                            <span className="text-[11px] font-medium">{redacao.extra_fields?.redacao_ano_serie}</span>
                         </div>
                         <div className="w-px h-4 bg-gray-200" />
-                        <h1 className="text-sm font-bold text-dark-gray truncate max-w-sm" title={redacao.titulo || 'Sem Título'}>
-                            {redacao.titulo || 'Sem Título'}
+                        <h1 className="text-sm font-bold text-dark-gray truncate max-w-sm" title={redacao.title || 'Sem Título'}>
+                            {redacao.title || 'Sem Título'}
                         </h1>
                     </div>
 
@@ -1129,7 +1125,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     : "text-lg text-gray-800 leading-relaxed"
                             )}
                         >
-                            {renderTextWithHighlights(redacao.texto, false)}
+                            {renderTextWithHighlights(redacao.essay || '', false)}
                         </div>
                     </div>
 
@@ -1216,8 +1212,9 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                 const c = CRITERIOS.find(crit => crit.id === activeCriterio);
                                 if (!c) return null;
 
-                                const notasIA = (redacao as any)[`criterio_${c.id}_nota`];
-                                const devolutivaIA = (redacao as any)[`criterio_${c.id}_devolutiva`];
+                                const skill = redacao.evaluated_skills?.[c.id - 1];
+                                const notasIA = skill?.score ?? 0;
+                                const devolutivaIA = skill?.comment ?? '';
                                 const criterionHighlights = highlights.filter(h => h.criterio_id === c.id && (!h.target || h.target === 'texto'));
 
                                 return (
