@@ -45,10 +45,10 @@ export const EXAMPLES_FEATURES: FeaturePill[] = [
     },
     {
         id: 'reading-mode',
-        title: 'Modo Foco e Layout Limpo',
-        shortDescription: 'Cores que descansam os olhos e espaço expandido.',
-        fullDescription: 'Para longas jornadas de correção, removemos todas as distrações visuais da tela. A coluna da redação ganhou um fundo "envelhecido" (papel) ameno, e a tabela de correção fica fixa na tela de maneira elegante.',
-        icon: 'Eye',
+        title: 'Modo Leitura e Interface Unificada',
+        shortDescription: 'Ambiente imersivo e interface de linha única.',
+        fullDescription: 'Criamos um ambiente de distração zero onde Sidebar e Topbar são ocultados automaticamente. Além disso, unificamos todos os controles em uma única linha premium no topo, maximizando o espaço vertical para a leitura.',
+        icon: 'Maximize',
         colorClass: 'bg-emerald-50 text-emerald-600 border-emerald-100',
     }
 ];
@@ -58,8 +58,8 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
         id: 'v1.1',
         version: 'v1.1',
         date: 'Março 2026',
-        title: 'Refinamento UI/UX e Tema Sépia Global',
-        description: 'Implementação do tema sépia em todo o sistema, nova seção de avaliação final com sanfona automática e melhorias de contraste e acessibilidade.',
+        title: 'Modo Leitura Imersivo e Interface Unificada',
+        description: 'Implementação do Modo Leitura com ocultação de menus, unificação dos controles no cabeçalho (Single Row) e melhorias na seção de avaliação final.',
         category: 'melhoria'
     },
     {

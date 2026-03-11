@@ -43,5 +43,17 @@ Novas ferramentas para proteger o trabalho do corretor e garantir a qualidade da
 - **Proteção contra Alterações Não Salvas**: O sistema detecta edições pendentes e solicita confirmação antes de sair da mesa, evitando a perda acidental de progresso.
 - **Fluxo de Navegação Corrigido**: O botão "Sair da Mesa" agora funciona de forma preditiva, retornando corretamente para a fila de revisão ou dashboard principal.
 
+### 📚 Modo Leitura Focado (Foco Imersivo)
+Criamos um ambiente de distração zero para que o corretor possa mergulhar no texto da redação.
+- **Ocultação Global**: Ao ativar o modo leitura, a Sidebar e o Topbar do sistema desaparecem instantaneamente via CSS.
+- **Expansão de Conteúdo**: A área de trabalho se expande para ocupar 100% da largura da tela, minimizando o ruído visual.
+- **Persistência de Ferramentas**: Mesmo no modo leitura, todas as funções de votação, comentários e edição de grifos permanecem totalmente acessíveis.
+
+### 📏 Interface Unificada (Single Row Layout)
+Redesenhamos os componentes de controle para maximizar a área visível da redação e da devolutiva.
+- **Cabeçalho All-in-One**: O topo da mesa agora centraliza absolutamente todos os controles. Sair da mesa, Identificação do Aluno, Critérios de Avaliação, Ferramentas de Edição e as ações de Salvar/Finalizar coexistem em uma única linha premium.
+- **Eliminação do Rodapé**: Com a migração das ações para o topo, removemos a barra inferior, garantindo 100% de aproveitamento vertical da tela para o conteúdo.
+- **Ícones sem Poluição**: Substituímos rótulos de texto por ícones elegantes e explicativos (Tooltips) para as ferramentas de edição.
+
 ---
 *Alimentado automaticamente para a página /ajuda*

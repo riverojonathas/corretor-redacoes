@@ -936,6 +936,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 onResetPopup={() => setHighlightPopup(null)}
                 readMode={readMode}
                 setReadMode={setReadMode}
+                onExitMesa={handleExitMesa}
+                onSaveRevisao={handleSaveRevisao}
+                submitting={submitting}
+                isAllComplete={isAllComplete}
             />
 
             <div className="flex flex-1 overflow-hidden">
@@ -1261,42 +1265,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 </div>
             </div>
 
-            {/* Barra de Ações Fixa */}
-            {!readMode && (
-                <div className="h-20 bg-[#fdfaf2]/80 backdrop-blur-md border-t border-[#eee9df] flex items-center justify-between px-8 lg:px-12 shrink-0 z-20 animate-in slide-in-from-bottom-full duration-500">
-                    <button
-                        onClick={() => handleExitMesa()}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-dark-gray transition-colors group"
-                    >
-                        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-                        Sair da Mesa
-                    </button>
-
-                    <div className="flex items-center gap-4">
-                        <button
-                            type="button"
-                            onClick={(e) => handleSaveRevisao(e, true)}
-                            disabled={submitting}
-                            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-dark-gray bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
-                        >
-                            <Loader2 size={16} className={cn("animate-spin", !submitting && "hidden")} />
-                            Salvar Rascunho
-                        </button>
-                        <button
-                            type="button"
-                            onClick={(e) => handleSaveRevisao(e, false)}
-                            disabled={submitting}
-                            className={cn(
-                                "flex items-center gap-2 px-8 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50",
-                                isAllComplete ? "bg-accent-red shadow-accent-red/20" : "bg-gray-400"
-                            )}
-                        >
-                            {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
-                            Finalizar Revisão
-                        </button>
-                    </div>
-                </div>
-            )}
             {/* Modal de Informação do Critério */}
             {isInfoModalOpen && criterios.find(crit => crit.id === activeCriterio) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
