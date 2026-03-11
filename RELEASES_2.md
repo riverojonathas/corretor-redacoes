@@ -57,5 +57,11 @@ Redesenhamos os componentes de controle para maximizar a área visível da reda�
 - **Eliminação do Rodapé**: Com a migração das ações para o topo, removemos a barra inferior, garantindo 100% de aproveitamento vertical da tela para o conteúdo.
 - **Ícones sem Poluição**: Substituímos rótulos de texto por ícones elegantes e explicativos (Tooltips) para as ferramentas de edição.
 
+### 📊 Avaliação da Adequação da Nota IA
+Implementamos um novo nível de auditoria para as notas atribuídas pela inteligência artificial.
+- **Validação por Critério**: Agora, além dos 3 temas de feedback, o revisor deve validar a nota da IA em cada um dos 5 critérios.
+- **Escala de Desvio**: Possibilidade de marcar a nota como "Adequada" ou indicar desvios específicos (1pt, 2pts ou >2pts) acima ou abaixo do esperado.
+- **Fluxo de Trabalho Rigoroso**: A conclusão de um critério agora exige o preenchimento dos 4 campos de avaliação, garantindo uma auditoria completa.
+
 ---
 *Alimentado automaticamente para a página /ajuda*

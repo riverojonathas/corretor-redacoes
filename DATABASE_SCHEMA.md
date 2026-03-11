@@ -59,28 +59,33 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `criterio_1_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_1_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_1_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_1_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_1_observacao` | `text` | Observação livre |
 | `criterio_2_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_2_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_2_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_2_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_2_observacao` | `text` | Observação livre |
 | `criterio_3_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_3_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_3_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_3_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_3_observacao` | `text` | Observação livre |
 | `criterio_4_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_4_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_4_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_4_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_4_observacao` | `text` | Observação livre |
 | `criterio_5_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_5_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_5_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_5_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_5_observacao` | `text` | Observação livre |
 | `comentario_geral`| `text` | Comentário final do corretor humano |
 | `favorita` | `boolean` | Indica se a correção foi favoritada pelo corretor |
 | `suspeita_ia` | `boolean` | Indica se o corretor suspeita que a redação foi gerada por IA |
 | `motivo_suspeita_ia` | `text` | Justificativa/motivos para a suspeita de uso de IA |
-| `avaliacoes` | `jsonb` | Armazena as avaliações dinâmicas das competências (Array: {criterio_id, tema_1, tema_2, tema_3, observacao}) |
+| `avaliacoes` | `jsonb` | Armazena as avaliações dinâmicas das competências (Array: {criterio_id, tema_1, tema_2, tema_3, tema_4, observacao}) |
 
 
 ### `revisao_destaques`

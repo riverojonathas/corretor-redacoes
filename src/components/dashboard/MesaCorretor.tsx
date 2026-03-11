@@ -192,10 +192,11 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
         const t2 = (formData as any)[`criterio_${criterioId}_tema_2`];
         const t3 = (formData as any)[`criterio_${criterioId}_tema_3`];
+        const t4 = (formData as any)[`criterio_${criterioId}_tema_4`];
 
-        const answeredCount = [t1, t2, t3].filter(val => val && val.toString().trim() !== '').length;
+        const answeredCount = [t1, t2, t3, t4].filter(val => val && val.toString().trim() !== '').length;
 
-        if (answeredCount === 3) return 'complete';
+        if (answeredCount === 4) return 'complete';
         if (answeredCount > 0) return 'partial';
         return 'empty';
     };
@@ -334,22 +335,27 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         criterio_1_tema_1: revData.criterio_1_tema_1 || '',
                         criterio_1_tema_2: revData.criterio_1_tema_2 || '',
                         criterio_1_tema_3: revData.criterio_1_tema_3 || '',
+                        criterio_1_tema_4: revData.criterio_1_tema_4 || '',
                         criterio_1_observacao: revData.criterio_1_observacao || '',
                         criterio_2_tema_1: revData.criterio_2_tema_1 || '',
                         criterio_2_tema_2: revData.criterio_2_tema_2 || '',
                         criterio_2_tema_3: revData.criterio_2_tema_3 || '',
+                        criterio_2_tema_4: revData.criterio_2_tema_4 || '',
                         criterio_2_observacao: revData.criterio_2_observacao || '',
                         criterio_3_tema_1: revData.criterio_3_tema_1 || '',
                         criterio_3_tema_2: revData.criterio_3_tema_2 || '',
                         criterio_3_tema_3: revData.criterio_3_tema_3 || '',
+                        criterio_3_tema_4: revData.criterio_3_tema_4 || '',
                         criterio_3_observacao: revData.criterio_3_observacao || '',
                         criterio_4_tema_1: revData.criterio_4_tema_1 || '',
                         criterio_4_tema_2: revData.criterio_4_tema_2 || '',
                         criterio_4_tema_3: revData.criterio_4_tema_3 || '',
+                        criterio_4_tema_4: revData.criterio_4_tema_4 || '',
                         criterio_4_observacao: revData.criterio_4_observacao || '',
                         criterio_5_tema_1: revData.criterio_5_tema_1 || '',
                         criterio_5_tema_2: revData.criterio_5_tema_2 || '',
                         criterio_5_tema_3: revData.criterio_5_tema_3 || '',
+                        criterio_5_tema_4: revData.criterio_5_tema_4 || '',
                         criterio_5_observacao: revData.criterio_5_observacao || '',
                         comentario_geral: revData.comentario_geral || '',
                         favorita: revData.favorita || false,
@@ -498,6 +504,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 tema_1: (formData as any)[`criterio_${c.id}_tema_1`],
                 tema_2: (formData as any)[`criterio_${c.id}_tema_2`],
                 tema_3: (formData as any)[`criterio_${c.id}_tema_3`],
+                tema_4: (formData as any)[`criterio_${c.id}_tema_4`],
                 observacao: (formData as any)[`criterio_${c.id}_observacao`]
             }));
 
@@ -1110,7 +1117,8 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                         const temas = [
                                                             { id: 1, label: "Identificação de pontos positivos" },
                                                             { id: 2, label: "Identificação do problema que levou à perda de nota" },
-                                                            { id: 3, label: "Sugestão de melhoria ao estudante" }
+                                                            { id: 3, label: "Sugestão de melhoria ao estudante" },
+                                                            { id: 4, label: "Avaliação da nota atribuída pela IA" }
                                                         ];
                                                         const correctOptions = ["Satisfatório", "Vago", "Incompleto", "Com erros"];
                                                         const incorrectOptions = ["Identificou incorretamente", "Não identificou", "Alucinação"];
@@ -1138,6 +1146,16 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                         setOpenTema(prev => ({ ...prev, [c.id]: nextTema?.id ?? null }));
                                                                     };
 
+                                                                    // Determine as opções com base no ID do tema
+                                                                    const isScoreTheme = tema.id === 4;
+                                                                    const currentCorrectOptions = isScoreTheme ? ["Adequada"] : correctOptions;
+                                                                    const currentIncorrectOptions = isScoreTheme
+                                                                        ? [
+                                                                            "1 ponto abaixo", "2 pontos abaixo", "mais de dois pontos abaixo",
+                                                                            "1 ponto acima", "2 pontos acima", "mais de dois pontos acima"
+                                                                        ]
+                                                                        : incorrectOptions;
+
                                                                     return (
                                                                         <div key={tema.id} className={cn(
                                                                             "rounded-2xl border transition-all duration-300 overflow-hidden",
@@ -1160,13 +1178,13 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                                     <span className={cn(
                                                                                         "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-all",
                                                                                         isDone
-                                                                                            ? isNegative(currentValue)
+                                                                                            ? isNegative(currentValue) || (isScoreTheme && currentValue !== "Adequada")
                                                                                                 ? "bg-rose-100 text-rose-600"
                                                                                                 : "bg-emerald-100 text-emerald-600"
                                                                                             : "bg-black/10 text-gray-400"
                                                                                     )}>
                                                                                         {isDone
-                                                                                            ? isNegative(currentValue) ? "✕" : "✓"
+                                                                                            ? isNegative(currentValue) || (isScoreTheme && currentValue !== "Adequada") ? "✕" : "✓"
                                                                                             : idx + 1
                                                                                         }
                                                                                     </span>
@@ -1180,7 +1198,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                                 {isDone && !isOpen && (
                                                                                     <span className={cn(
                                                                                         "text-[12px] font-bold px-3 py-1 rounded-full border transition-all",
-                                                                                        isNegative(currentValue)
+                                                                                        isNegative(currentValue) || (isScoreTheme && currentValue !== "Adequada")
                                                                                             ? "text-rose-700 bg-rose-50 border-rose-200"
                                                                                             : "text-emerald-700 bg-emerald-50 border-emerald-200"
                                                                                     )}>
@@ -1192,7 +1210,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                             {/* Corpo expansível */}
                                                                             {isOpen && (
                                                                                 <div className="px-5 pb-5 flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                                                    {correctOptions.map(opt => (
+                                                                                    {currentCorrectOptions.map(opt => (
                                                                                         <button
                                                                                             key={opt}
                                                                                             type="button"
@@ -1208,7 +1226,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                                                         </button>
                                                                                     ))}
                                                                                     <div className="w-px h-4 bg-[#eee9df] mx-1" />
-                                                                                    {incorrectOptions.map(opt => (
+                                                                                    {currentIncorrectOptions.map(opt => (
                                                                                         <button
                                                                                             key={opt}
                                                                                             type="button"
