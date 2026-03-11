@@ -1057,28 +1057,26 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                 return (
                                     <div key={`content-${c.id}`} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
                                         <div className={cn(
-                                            "sticky top-0 z-10 border-b border-gray-200 flex items-start justify-between px-8 lg:px-12 py-6 transition-all",
+                                            "sticky top-0 z-10 border-b border-gray-200 flex items-center justify-between px-8 lg:px-12 py-3 transition-all",
                                             readMode ? "bg-transparent opacity-40 hover:opacity-100" : "bg-[#fdfaf2]/95 backdrop-blur-sm shadow-sm"
                                         )}>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <h3 className="font-bold text-dark-gray text-2xl">
-                                                        {c.name}
-                                                    </h3>
-                                                    {c.full_desc && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setIsInfoModalOpen(true)}
-                                                            className="text-gray-500 hover:text-dark-gray focus:outline-none transition-colors"
-                                                        >
-                                                            <HelpCircle size={18} />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-widest">{c.desc}</p>
+                                            <div className="flex items-center gap-3">
+                                                <h3 className="font-bold text-dark-gray text-lg flex items-center gap-2">
+                                                    <span className="bg-dark-gray text-white text-[10px] px-1.5 py-0.5 rounded leading-none">C{c.id}</span>
+                                                    <span className="uppercase tracking-wide">{c.desc}</span>
+                                                </h3>
+                                                {c.full_desc && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setIsInfoModalOpen(true)}
+                                                        className="text-gray-400 hover:text-dark-gray focus:outline-none transition-colors"
+                                                    >
+                                                        <HelpCircle size={16} />
+                                                    </button>
+                                                )}
                                             </div>
-                                            <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10 shrink-0">
-                                                <span className="text-sm font-bold text-accent-red">Nota IA: {notasIA}</span>
+                                            <div className="bg-accent-red/5 px-4 py-1.5 rounded-full border border-accent-red/10 shrink-0">
+                                                <span className="text-[11px] font-black text-accent-red uppercase tracking-wider">Nota IA: {notasIA}</span>
                                             </div>
                                         </div>
 
