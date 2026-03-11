@@ -166,8 +166,39 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                     'Changelog Completo por Release: cada versão na Central do Corretor agora exibe o histórico detalhado em modal fullscreen.',
                 ],
             },
+            {
+                section: '🔒 Sistema de Lock — Sem Mais Trabalho Duplicado',
+                items: [
+                    'Proteção de Revisão: ao abrir uma redação, o sistema registra que você está revisando — outros corretores são avisados e direcionados para outra redação.',
+                    'Renovação Automática: o lock é renovado a cada 10 minutos enquanto você estiver na mesa, sem nenhuma ação necessária.',
+                    'Expiração Inteligente: se você fechar o navegador ou ficar inativo por 30 minutos, o lock é liberado automaticamente para a fila.',
+                    'Badge "Em uso" na Fila: redações sendo revisadas no momento aparecem com um indicador laranja na lista.',
+                    'Tela de Bloqueio Graciosa: ao tentar abrir uma redação em uso, uma tela informativa orienta a escolher outra.',
+                ],
+            },
+            {
+                section: '⚡ Performance — Filtros e Carregamento',
+                items: [
+                    'Filtros Server-side: buscas por Tema, Nick e Série agora são executadas diretamente no banco — zero travamento, mesmo com milhares de redações.',
+                    'Debounce de 300ms: o banco só é consultado quando você para de digitar, economizando requisições.',
+                    'Paginação na Fila: a lista carrega 50 redações por vez com botão "Carregar mais", eliminando longos tempos de carregamento inicial.',
+                    'Dashboard Otimizado: métricas calculadas por Views SQL no banco — carregamento em menos de 50ms independente do volume de redações.',
+                    '5 Índices no Banco: criados índices nas colunas críticas (answer_id, corretor_id, redacao_id, tema) — queries entre 5× e 200× mais rápidas.',
+                ],
+            },
+            {
+                section: '🏗️ Refatoração e Performance do MesaCorretor',
+                items: [
+                    'Arquivo Principal -49%: MesaCorretor.tsx reduzido de 1.376 para 706 linhas, eliminando travamentos de build no Turbopack.',
+                    'CriterioPanel: painel de avaliação extraído para componente dedicado, com re-renders mais precisos.',
+                    'Hook useCorrectionState: estado de formulário, destaques e dirty tracking isolados em hook reutilizável.',
+                    'Modais Independentes: CriterioInfoModal e ExitConfirmModal agora são componentes autônomos.',
+                    'sanitizeTextWithHighlights migrado para lib/textUtils (utilitário compartilhado).',
+                ],
+            },
         ],
     },
+
     {
         id: 'v1.1',
         version: 'v1.1',
