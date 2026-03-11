@@ -66,13 +66,13 @@ export function RedacaoList({
     }
 
     return (
-        <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)] bg-gray-50/30">
+        <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)]">
             <div>
                 <h1 className="text-3xl font-bold text-dark-gray">Fila de Revisão</h1>
                 <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
+            <div className="bg-white/40 p-6 rounded-2xl shadow-sm border border-gray-200/50 flex flex-col gap-4">
                 <div className="flex items-center gap-4 mb-2">
                     <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-dark-gray">
                         <input
@@ -118,7 +118,7 @@ export function RedacaoList({
                 </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white/40 rounded-2xl shadow-sm border border-gray-200/50 overflow-hidden">
                 {loadingLista ? (
                     <div className="divide-y divide-gray-100 animate-pulse">
                         {[1, 2, 3, 4, 5].map((i) => (
@@ -154,25 +154,25 @@ export function RedacaoList({
                                         onSelectRedacao(item.id, item.revisao_id);
                                     }
                                 }}
-                                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 hover:pl-8 transition-all text-left group"
+                                className="w-full flex items-center justify-between p-6 hover:bg-black/5 hover:pl-8 transition-all text-left group"
                             >
                                 <div className="flex-1 min-w-0 pr-4">
                                     <div className="flex items-center flex-wrap gap-2 mb-3">
-                                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100">
+                                        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-100/30 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-200/30">
                                             <ClipboardList size={12} />
                                             {item.model_id || 'Geral'}
                                         </span>
 
                                         {item.status === 'concluida' || item.status === 'corrigida' ? (
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-100">
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-100/30 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-200/30">
                                                 <Check size={12} /> Concluída
                                             </span>
                                         ) : item.status === 'rascunho' ? (
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-100">
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-100/30 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-200/30">
                                                 <Clock size={12} /> Rascunho
                                             </span>
                                         ) : (
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-100">
+                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100/30 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-200/30">
                                                 <Clock size={12} /> Pendente
                                             </span>
                                         )}
@@ -184,12 +184,12 @@ export function RedacaoList({
                                     </h3>
 
                                     <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">
-                                        <span className="flex items-center gap-1.5 text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded">
+                                        <span className="flex items-center gap-1.5 text-gray-600 font-bold bg-black/5 px-2 py-0.5 rounded">
                                             <UserIcon size={14} className="text-gray-400" />
                                             {item.nick}
                                         </span>
                                         <span className="text-gray-300">•</span>
-                                        <span className="flex items-center gap-1.5 text-gray-600">
+                                        <span className="flex items-center gap-1.5 text-gray-600 font-medium">
                                             <GraduationCap size={14} className="text-gray-400" />
                                             {item.nm_tipo_ensino && `${item.nm_tipo_ensino} - `}{item.nr_serie}
                                         </span>

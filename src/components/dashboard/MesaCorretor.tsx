@@ -35,12 +35,12 @@ import { RedacaoList } from './RedacaoList';
 import { CorrectionHeader } from './CorrectionHeader';
 import { FloatingToolbar, FixedToolbar } from './HighlightTools';
 
-const CRITERIOS: Criterio[] = [
-    { id: 1, name: 'Competência 1', desc: 'Domínio da norma culta', full_desc: '' },
-    { id: 2, name: 'Competência 2', desc: 'Compreender a proposta', full_desc: '' },
-    { id: 3, name: 'Competência 3', desc: 'Selecionar e organizar info', full_desc: '' },
-    { id: 4, name: 'Competência 4', desc: 'Conhecimento linguístico', full_desc: '' },
-    { id: 5, name: 'Competência 5', desc: 'Proposta de intervenção', full_desc: '' },
+const defaultCriterios: Criterio[] = [
+    { id: 1, name: 'Critério 1', desc: 'Domínio da norma culta', full_desc: '' },
+    { id: 2, name: 'Critério 2', desc: 'Compreender a proposta', full_desc: '' },
+    { id: 3, name: 'Critério 3', desc: 'Selecionar e organizar info', full_desc: '' },
+    { id: 4, name: 'Critério 4', desc: 'Conhecimento linguístico', full_desc: '' },
+    { id: 5, name: 'Critério 5', desc: 'Proposta de intervenção', full_desc: '' },
 ];
 
 function sanitizeTextWithHighlights(text: string, hls: Highlight[]) {
@@ -175,12 +175,12 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         if (redacao?.assessed_skills && redacao.assessed_skills.length > 0) {
             return redacao.assessed_skills.map((s, idx) => ({
                 id: idx + 1,
-                name: `Competência ${idx + 1}`,
+                name: `Critério ${idx + 1}`,
                 desc: s.statement,
                 full_desc: s.description
             }));
         }
-        return CRITERIOS.map(c => ({ ...c, full_desc: '' }));
+        return defaultCriterios.map(c => ({ ...c, full_desc: '' }));
     }, [redacao]);
 
     // Readability State

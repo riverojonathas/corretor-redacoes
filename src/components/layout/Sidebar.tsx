@@ -24,7 +24,7 @@ export function Sidebar() {
     ];
 
     return (
-        <aside className="fixed left-0 top-0 h-screen w-sidebar bg-white border-r border-gray-100 flex flex-col items-center py-8 z-50">
+        <aside className="fixed left-0 top-0 h-screen w-sidebar bg-[#fdfaf2] border-r border-[#eee9df] flex flex-col items-center py-8 z-50">
             {/* Logo area */}
             <div className="mb-10">
                 <div className="w-8 h-8 rounded-lg bg-accent-red flex items-center justify-center text-white shadow-sm">
@@ -45,7 +45,7 @@ export function Sidebar() {
                                 "p-2 rounded-lg transition-all duration-200 group relative",
                                 isActive
                                     ? "bg-accent-red text-white shadow-sm"
-                                    : "text-gray-400 hover:text-dark-gray hover:bg-gray-50"
+                                    : "text-gray-400 hover:text-dark-gray hover:bg-black/5"
                             )}
                         >
                             <item.icon size={20} />

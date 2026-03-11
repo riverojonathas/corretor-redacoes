@@ -7,11 +7,11 @@ Agora o sistema não está restrito às 5 competências fixas. Os critérios sã
 - **Nomes Personalizados**: Abaixo do título "Competência X", agora é exibido o enunciado real do critério definido na proposta.
 - **Suporte a N Competências**: A interface se adapta automaticamente se uma proposta contiver mais ou menos de 5 critérios.
 
-### 📖 Central de Ajuda e Critérios (Competências)
-Adicionado um botão de ajuda (`?`) ao lado de cada competência na Mesa do Corretor, agora com uma experiência de leitura superior.
+### 📖 Central de Ajuda e Critérios
+Adicionado um botão de ajuda (`?`) ao lado de cada critério na Mesa do Corretor, agora com uma experiência de leitura superior.
 - **Modal de Explicação**: Substituímos os tooltips por um Modal centralizado e espaçoso. As descrições agora são exibidas em fonte serifada sobre fundo sépia, ideal para textos longos e técnicos.
-- **Sanitização de Descrições**: Todas as descrições de competência passam por uma limpeza automática de caracteres de formatação (`\n`, `\t`), garantindo clareza total.
-- **Nomes Dinâmicos**: O sistema carrega nomes e enunciados reais das propostas, adaptando-se automaticamente a diferentes modelos de avaliação.
+- **Sanitização de Descrições**: Todos os critérios passam por uma limpeza automática de caracteres de formatação (`\n`, `\t`), garantindo clareza total.
+- **Nomes Dinâmicos**: O sistema carrega nomes e enunciados reais das propostas, exibindo "Critério X" nas abas superiores.
 
 ### 🏗️ Refatoração Arquitetural e de Performance
 O componente central da Mesa do Corretor foi completamente reestruturado para garantir estabilidade e fluidez.

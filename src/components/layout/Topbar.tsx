@@ -71,7 +71,7 @@ export function Topbar() {
     };
 
     return (
-        <header className="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-40">
+        <header className="h-16 bg-[#fdfaf2]/80 backdrop-blur-md border-b border-[#eee9df] flex items-center justify-between px-8 sticky top-0 z-40">
             {/* Left side: Breadcrumbs or Search */}
             <div className="flex items-center gap-2 text-sm text-gray-500">
                 <Link href="/dashboard" className="hover:text-dark-gray transition-colors">FDE</Link>
@@ -141,7 +141,7 @@ export function Topbar() {
 
                             <button
                                 onClick={handleSignOut}
-                                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+                                className="flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50/50 transition-colors w-full text-left font-bold"
                             >
                                 <LogOut size={14} />
                                 Sair

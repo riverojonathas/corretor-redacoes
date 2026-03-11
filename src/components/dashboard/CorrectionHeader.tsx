@@ -151,7 +151,7 @@ export function CorrectionHeader({
                             )}
                         >
                             <div className="flex items-center justify-center gap-1.5">
-                                Competência {c.id}
+                                Critério {c.id}
                                 {getCriterioStatus(c.id) === 'complete' && <CheckCircle2 size={12} className="text-green-500 shrink-0" />}
                                 {getCriterioStatus(c.id) === 'partial' && <AlertCircle size={12} className="text-yellow-500 shrink-0" />}
                             </div>

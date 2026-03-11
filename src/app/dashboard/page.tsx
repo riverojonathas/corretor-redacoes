@@ -101,8 +101,8 @@ export default function DashboardPage() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-blue-50 text-blue-600">
+                    <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-blue-100/30 text-blue-600">
                             <FileText size={24} />
                         </div>
                         <div>
@@ -113,8 +113,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-purple-50 text-purple-600">
+                    <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-purple-100/30 text-purple-600">
                             <BookOpen size={24} />
                         </div>
                         <div>
@@ -125,8 +125,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-green-50 text-green-600">
+                    <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-green-100/30 text-green-600">
                             <CheckCircle2 size={24} />
                         </div>
                         <div>
@@ -137,8 +137,8 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
-                        <div className="p-3 rounded-xl bg-accent-red/10 text-accent-red">
+                    <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-accent-red/10 text-accent-red font-bold">
                             <BarChart3 size={24} />
                         </div>
                         <div>
@@ -153,11 +153,11 @@ export default function DashboardPage() {
                 {/* Secundary Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Ações Rápidas */}
-                    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col h-full">
+                    <div className="bg-white/40 p-8 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col h-full">
                         <h2 className="text-xl font-bold text-dark-gray mb-6">Ações Rápidas</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                             {/* Ações para Corretores (Visualizado por todos) */}
-                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-accent-red hover:bg-accent-red/5 transition-all group h-full">
+                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-200/40 bg-white/40 hover:border-accent-red hover:bg-accent-red/5 transition-all group h-full">
                                 <FileText className="text-gray-400 group-hover:text-accent-red mb-3 transition-colors shrink-0" size={24} />
                                 <span className="font-semibold text-dark-gray">Birô de Revisão</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para analisar textos e atribuir notas finais às redações pendentes.</span>
@@ -189,13 +189,13 @@ export default function DashboardPage() {
                     </div>
 
                     {/* Médias por Série */}
-                    <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-sm">
+                    <div className="bg-white/40 p-8 rounded-2xl border border-gray-200/50 shadow-sm">
                         <h2 className="text-xl font-bold text-dark-gray mb-6">Nota Média por Série</h2>
                         {loadingStats ? (
                             <div className="animate-pulse space-y-4">
-                                <div className="h-10 bg-gray-100 rounded-lg w-full"></div>
-                                <div className="h-10 bg-gray-100 rounded-lg w-full"></div>
-                                <div className="h-10 bg-gray-100 rounded-lg w-full"></div>
+                                <div className="h-10 bg-black/5 rounded-lg w-full"></div>
+                                <div className="h-10 bg-black/5 rounded-lg w-full"></div>
+                                <div className="h-10 bg-black/5 rounded-lg w-full"></div>
                             </div>
                         ) : !stats || Object.keys(stats.mediasPorSerie).length === 0 ? (
                             <div className="text-center py-8 text-gray-500">
@@ -204,7 +204,7 @@ export default function DashboardPage() {
                         ) : (
                             <div className="space-y-4">
                                 {Object.entries(stats.mediasPorSerie).sort((a, b) => b[1] - a[1]).map(([serie, media], idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                    <div key={idx} className="flex items-center justify-between p-4 bg-white/30 rounded-xl border border-gray-200/50">
                                         <span className="font-bold text-dark-gray">{serie}</span>
                                         <div className="flex items-center gap-2">
                                             <span className="text-sm font-bold text-accent-red bg-accent-red/10 px-3 py-1 rounded-full">
