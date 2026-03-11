@@ -11,16 +11,17 @@ import {
     AlertCircle,
     BookOpen,
     ArrowLeft,
-    Star,
     X,
     Highlighter,
-    HelpCircle
+    HelpCircle,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Redacao, RedacaoListItem, Highlight, Criterio } from '@/types/dashboard';
 import { sanitizeTextWithHighlights } from '@/lib/textUtils';
 import { useCorrectionState } from '@/hooks/useCorrectionState';
 import { useRedacoesList } from '@/hooks/useRedacoesList';
+import { useLock } from '@/hooks/useLock';
 import { RedacaoList } from './RedacaoList';
 import { CorrectionHeader } from './CorrectionHeader';
 import { FloatingToolbar, FixedToolbar } from './HighlightTools';
@@ -67,6 +68,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         isDirty, resetForm, syncPristine,
     } = useCorrectionState();
 
+    // ── Lock / Atribuição (Fase D) ─────────────────────────
+    const { acquireLock, releaseLock } = useLock(user?.id);
+    const [lockBlocked, setLockBlocked] = useState(false);
+
     // ── Highlight Popup State ──────────────────────────────
     const [highlightPopup, setHighlightPopup] = useState<{
         visible: boolean; x: number; y: number;
@@ -112,9 +117,12 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const isAllComplete = criterios.every(c => getCriterioStatus(c.id) === 'complete');
 
     // ── Exit Handler ────────────────────────────────────────
-    const handleExitMesa = useCallback((force = false) => {
+    const handleExitMesa = useCallback(async (force = false) => {
         if (!force && isDirty()) { setShowExitConfirm(true); return; }
         setShowExitConfirm(false);
+        // Libera o lock ao sair
+        if (redacao) await releaseLock(redacao.id);
+        setLockBlocked(false);
         if (initialAnswerId) {
             router.push('/dashboard');
         } else {
@@ -123,7 +131,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             setRedacao(null);
             if (window.location.pathname.includes('/dashboard/revisao')) router.push('/dashboard');
         }
-    }, [isDirty, initialAnswerId, router]);
+    }, [isDirty, initialAnswerId, router, redacao, releaseLock]);
 
     // ── Inicialização: se tem answer_id direto, vai pra correção ─
     useEffect(() => {
@@ -155,6 +163,21 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     const handleSelectRedacao = async (id: string, revisaoId?: string) => {
         if (!user) return;
+
+        // ── Fase D: Tentar adquirir o lock ─────────────────
+        const lockResult = await acquireLock(id);
+        if (lockResult.status === 'blocked') {
+            setLockBlocked(true);
+            setView('correction');
+            toast.warning('⚠️ Esta redação está sendo revisada por outro corretor no momento.');
+            return;
+        }
+        if (lockResult.status === 'error') {
+            // Lock falhou mas permite continuar (degradação graciosa)
+            console.warn('Lock não adquirido:', lockResult.message);
+        }
+
+        setLockBlocked(false);
         setView('correction');
         setLoadingRedacao(true);
         try {
@@ -287,7 +310,11 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             }
             toast.success(isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!');
             syncPristine(formData as any, highlights);
-            if (!isDraft) setTimeout(() => handleExitMesa(), 2000);
+            if (!isDraft) {
+                // Libera o lock ao finalizar
+                if (redacao) await releaseLock(redacao.id);
+                setTimeout(() => handleExitMesa(), 2000);
+            }
         } catch (error: any) {
             console.error('Erro ao salvar:', error);
             toast.error('Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido.'));
@@ -479,6 +506,28 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             />
         );
     }
+
+    // ── Render: Redação em uso por outro corretor ────────────
+    if (lockBlocked) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-[#fdfaf2] text-center px-4">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <Lock className="h-10 w-10 text-amber-500" />
+                </div>
+                <h2 className="text-2xl font-bold text-dark-gray mb-2">Redação em uso</h2>
+                <p className="text-gray-500 max-w-sm leading-relaxed mb-8">
+                    Outro corretor está revisando esta redação no momento. Por favor, escolha outra ou aguarde o lock expirar (30 minutos).
+                </p>
+                <button
+                    onClick={() => { setLockBlocked(false); setView('list'); }}
+                    className="flex items-center gap-2 px-6 py-3 bg-dark-gray text-white rounded-xl hover:bg-black transition-all font-semibold"
+                >
+                    <ArrowLeft size={16} /> Voltar para a Fila
+                </button>
+            </div>
+        );
+    }
+
 
     // ── Render: Loading skeleton ────────────────────────────
     if (loadingRedacao) {

@@ -42,7 +42,7 @@ export function useRedacoesList(userId: string | undefined) {
         try {
             let query = supabase
                 .from('redacoes')
-                .select('id, title, nick, extra_fields, answer_id, revisoes(id, corretor_id, favorita, status)')
+                .select('id, title, nick, extra_fields, answer_id, locked_by, locked_at, revisoes(id, corretor_id, favorita, status)')
                 .order('created_at', { ascending: false })
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
@@ -66,6 +66,11 @@ export function useRedacoesList(userId: string | undefined) {
                 const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
                     const rev = r.revisoes?.find((rev: any) => rev.corretor_id === userId);
                     const extras = r.extra_fields || {};
+                    // Verifica se o lock ainda é válido (TTL 30min)
+                    const LOCK_TTL_MS = 30 * 60 * 1000;
+                    const isLocked = r.locked_by &&
+                        r.locked_at &&
+                        (new Date(r.locked_at).getTime() + LOCK_TTL_MS) > Date.now();
                     return {
                         id: r.id,
                         titulo: r.title || 'Sem Título',
@@ -76,7 +81,8 @@ export function useRedacoesList(userId: string | undefined) {
                         answer_id: r.answer_id,
                         status: rev ? (rev.status || 'concluida') : 'pendente',
                         revisao_id: rev?.id,
-                        favorita: rev?.favorita || false
+                        favorita: rev?.favorita || false,
+                        isLocked: !!isLocked && r.locked_by !== userId,
                     };
                 });
 

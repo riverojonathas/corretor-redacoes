@@ -55,6 +55,7 @@ Redesenhamos os componentes de controle para maximizar a área visível da reda�
 - **Cabeçalho de Critérios Compacto**: Unificamos o nome e a descrição do critério em uma única linha (ex: C1 - Norma Culta), reduzindo drásticamente a ocupação vertical da área de trabalho.
 - **Tipografia Otimizada**: Ajustamos o tamanho da fonte da redação e reduzimos margens/paddings excessivos para garantir que mais conteúdo seja visível sem rolagens desnecessárias.
 - **Bloco de IA Aproximado**: Reduzimos o distanciamento entre a redação e o switch de "Suspeita de IA", garantindo que ele não fique "escondido" em textos mais longos.
+- **Métricas do Dashboard Corrigidas**: Ajustamos o cálculo de "Modelos Disponíveis" para refletir temas únicos e corrigimos a "Nota Média Geral" para processar corretamente as pontuações da IA.
 - **Eliminação do Rodapé**: Com a migração das ações para o topo, removemos a barra inferior, garantindo 100% de aproveitamento vertical da tela para o conteúdo.
 - **Ícones sem Poluição**: Substituímos rótulos de texto por ícones elegantes e explicativos (Tooltips) para as ferramentas de edição.
 
@@ -67,15 +68,6 @@ Implementamos um novo nível de auditoria para as notas atribuídas pela intelig
 > [!IMPORTANT]
 > **Ação Necessária**: Esta atualização requer a execução do script SQL abaixo no editor do Supabase para adicionar as novas colunas de avaliação (`tema_4`) na tabela `revisoes`.
 
-```sql
--- Adicionar novas colunas de avaliação de nota (Tema 4) para todos os critérios
-ALTER TABLE public.revisoes 
-ADD COLUMN criterio_1_tema_4 text,
-ADD COLUMN criterio_2_tema_4 text,
-ADD COLUMN criterio_3_tema_4 text,
-ADD COLUMN criterio_4_tema_4 text,
-ADD COLUMN criterio_5_tema_4 text;
-```
 
 ---
 *Alimentado automaticamente para a página /ajuda*

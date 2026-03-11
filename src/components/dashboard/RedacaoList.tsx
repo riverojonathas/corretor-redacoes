@@ -12,7 +12,8 @@ import {
     ClipboardList,
     ChevronRight,
     ChevronDown,
-    Loader2
+    Loader2,
+    Lock
 } from 'lucide-react';
 import { RedacaoListItem } from '@/types/dashboard';
 import { ListFilters } from '@/hooks/useRedacoesList';
@@ -174,6 +175,13 @@ export function RedacaoList({
                                                 <ClipboardList size={12} />
                                                 {item.model_id || 'Geral'}
                                             </span>
+
+                                            {/* Badge de lock — Fase D */}
+                                            {item.isLocked && (
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100/40 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-300/60">
+                                                    <Lock size={10} /> Em uso
+                                                </span>
+                                            )}
 
                                             {item.status === 'concluida' || item.status === 'corrigida' ? (
                                                 <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-100/30 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-200/30">
