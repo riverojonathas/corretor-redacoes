@@ -42,7 +42,10 @@ export default function DashboardPage() {
 
                 // Processamento de dados
                 const totalRedacoes = redacoes.length;
-                const totalModelos = new Set(redacoes.map((r: any) => r.title?.trim())).size;
+                const totalModelos = new Set(
+                    redacoes.map((r: any) => r.extra_fields?.redacao_tema?.trim())
+                           .filter(Boolean)
+                ).size;
                 const totalRevisoes = revisoesCount || 0;
 
                 let sumGeral = 0;
@@ -52,9 +55,11 @@ export default function DashboardPage() {
 
                 redacoes.forEach((r: any) => {
                     const skills = r.evaluated_skills || [];
-                    const notaTotal = skills.reduce((sum: number, s: any) => sum + (s.score || 0), 0);
+                    // Soma as 5 competências (C1-C5) se existirem
+                    const notaTotal = skills.reduce((sum: number, s: any) => sum + (Number(s.score) || 0), 0);
 
-                    if (notaTotal > 0) { // Assume redação zerada se n tiver nota, mas pra média é melhor considerar só se tiver > 0 (ou considerar tudo, depende. Vamos considerar todas as redacoes)
+                    // Consideramos para a média apenas se a redação tiver alguma avaliação válida ou não estiver zerada por erro
+                    if (notaTotal > 0 || r.extra_fields?.redacao_zerada === false) {
                         sumGeral += notaTotal;
                         countGeral++;
 
