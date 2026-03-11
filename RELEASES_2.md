@@ -19,6 +19,16 @@ O componente central da Mesa do Corretor foi completamente reestruturado para ga
 - **Performance do IDE**: Redução drástica no tamanho do arquivo principal, eliminando travamentos durante o desenvolvimento.
 - **Builds Otimizados**: A nova estrutura modular contribui para tempos de build mais previsíveis e menor carga de processamento.
 
+### ✨ Nova Seção de Avaliação Final (Acordeão)
+Implementamos um novo fluxo de preenchimento para as 3 perguntas de avaliação de cada critério, focado em agilidade e foco.
+- **Sanfona Automática**: O sistema abre automaticamente o próximo campo a ser preenchido e minimiza os já completados em um resumo compacto.
+- **Botões de Opção (Pills)**: Substituímos listas suspensas (dropdowns) por botões de clique único, divididos entre categorias "Correto" e "Incorreto".
+- **Feedback Visual Inteligente**: 
+    - Opções positivas ganham tons de verde (`Emerald`).
+    - Opções negativas ganham tons de vermelho/laranja (`Rose`).
+    - Ícones de check (`✓`/`✕`) e badges coloridos aparecem no modo minimizado para rápida revisão.
+- **Indicadores de Status**: Adicionado selos de "Preenchido" em tempo real para cada bloco, incluindo a área de Observação do Critério.
+
 ### 🎨 Conforto Visual e Limpeza de Dados (Global)
 A interface e o processamento de texto foram elevados para um padrão premium em todo o sistema.
 - **Tema Sépia Global**: Extendemos o tom amarelado confortável (`#fdfaf2`) para todas as páginas do sistema, incluindo Dashboard, Sidebar, Topbar, Configurações e toda a área administrativa.
