@@ -5,6 +5,9 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 > [!IMPORTANT]
 > Use sempre nomes de colunas em **minúsculas**.
 
+> [!TIP]
+> Os índices de performance documentados na **Seção 5** são obrigatórios para escalar o sistema. Execute o script SQL sempre que criar um novo ambiente (staging, produção).
+
 ## 1. Tabela `perfis`
 *Tabela de Usuários/Corretores*
 
@@ -44,6 +47,8 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `extra_fields` | `jsonb` | Metadados extras (ex: `redacao_tema`, `redacao_ano_serie`, `redacao_zerada`) |
 | `created_at` | `timestamptz` | Data de ingestão / Data do registro base (`createdAt`) |
 | `updated_at` | `timestamptz` | Data de atualização original (`updatedAt`) |
+| `locked_by` | `uuid` | FK para `perfis.id` — corretor que está revisando (Fase D) |
+| `locked_at` | `timestamptz` | Timestamp de quando o lock foi adquirido (Fase D) |
 
 ---
 
@@ -59,25 +64,34 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `criterio_1_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_1_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_1_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_1_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_1_observacao` | `text` | Observação livre |
 | `criterio_2_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_2_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_2_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_2_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_2_observacao` | `text` | Observação livre |
 | `criterio_3_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_3_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_3_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_3_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_3_observacao` | `text` | Observação livre |
 | `criterio_4_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_4_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_4_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_4_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_4_observacao` | `text` | Observação livre |
 | `criterio_5_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_5_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_5_tema_3` | `text` | Avaliação: Sugestão de melhoria |
+| `criterio_5_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_5_observacao` | `text` | Observação livre |
 | `comentario_geral`| `text` | Comentário final do corretor humano |
 | `favorita` | `boolean` | Indica se a correção foi favoritada pelo corretor |
+| `suspeita_ia` | `boolean` | Indica se o corretor suspeita que a redação foi gerada por IA |
+| `motivo_suspeita_ia` | `text` | Justificativa/motivos para a suspeita de uso de IA |
+| `avaliacoes` | `jsonb` | Armazena as avaliações dinâmicas das competências (Array: {criterio_id, tema_1, tema_2, tema_3, tema_4, observacao}) |
+
 
 ### `revisao_destaques`
 Armazena os trechos de texto destacados (marca-texto) durante a revisão, atrelados a um critério.
@@ -129,4 +143,197 @@ ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can insert own feedbacks" ON public.feedbacks FOR INSERT WITH CHECK (auth.uid() = user_id);
 -- Admins podem ler todos (assumindo que verificamos cargo no app, ou criando política)
 CREATE POLICY "Admins read all feedbacks" ON public.feedbacks FOR SELECT USING (true); -- Simplificado
+```
+
+---
+
+## 5. Índices de Performance
+*Criados na Fase A do Plano de Performance — Março 2026*
+
+> [!IMPORTANT]
+> Execute este script no **SQL Editor do Supabase** sempre que recriar o banco ou provisionar um novo ambiente. Sem esses índices, queries críticas fazem **full-scan** na tabela.
+
+### Por que cada índice importa
+
+| Índice | Tabela | Coluna | Query beneficiada |
+| :--- | :--- | :--- | :--- |
+| `idx_redacoes_answer_id` | `redacoes` | `answer_id` | Busca de redação ao abrir a Mesa do Corretor |
+| `idx_revisoes_corretor_id` | `revisoes` | `corretor_id` | Lista de revisões feitas por um corretor |
+| `idx_revisoes_redacao_id` | `revisoes` | `redacao_id` | Verificação se já existe revisão para uma redação |
+| `idx_feedbacks_user_id` | `feedbacks` | `user_id` | Busca de chamados do usuário em Configurações |
+| `idx_redacoes_tema` | `redacoes` | `extra_fields->>'redacao_tema'` | Contagem de modelos únicos no Dashboard |
+
+### Script SQL (Fase A)
+
+```sql
+-- Fase A: Índices de Performance
+-- Executar no SQL Editor do Supabase
+
+-- Índice: busca por answer_id (usado na Mesa do Corretor)
+CREATE INDEX IF NOT EXISTS idx_redacoes_answer_id ON public.redacoes(answer_id);
+
+-- Índice: revisões por corretor
+CREATE INDEX IF NOT EXISTS idx_revisoes_corretor_id ON public.revisoes(corretor_id);
+
+-- Índice: revisões por redação
+CREATE INDEX IF NOT EXISTS idx_revisoes_redacao_id ON public.revisoes(redacao_id);
+
+-- Índice: feedbacks por usuário
+CREATE INDEX IF NOT EXISTS idx_feedbacks_user_id ON public.feedbacks(user_id);
+
+-- Índice: busca por tema dentro de extra_fields JSONB
+CREATE INDEX IF NOT EXISTS idx_redacoes_tema ON public.redacoes((extra_fields->>'redacao_tema'));
+```
+
+### Verificar se os índices foram criados
+
+```sql
+SELECT indexname, tablename, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND indexname LIKE 'idx_%'
+ORDER BY tablename, indexname;
+```
+
+---
+
+## 6. Views de Performance
+*Criadas na Fase B do Plano de Performance — Março 2026*
+
+> [!IMPORTANT]
+> As views abaixo **substituem o full-scan** de todas as redações que era feito no Dashboard. Execute o script sempre que recriar o banco. Sem elas, o Dashboard busca todos os dados brutos no cliente.
+
+### `dashboard_stats`
+Retorna os 4 agregados globais do Dashboard em uma única linha. Elimina a busca de todas as redações.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `total_redacoes` | `bigint` | Total de redações na base |
+| `total_modelos` | `bigint` | Temas distintos em `extra_fields->>'redacao_tema'` |
+| `total_revisoes` | `bigint` | Total de revisões feitas por corretores |
+| `nota_media_geral` | `numeric` | Média da soma das 5 competências de cada redação |
+
+### `dashboard_stats_por_serie`
+Agrupa redações por série escolar e calcula a nota média de cada grupo.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `serie` | `text` | Série (de `extra_fields->>'redacao_ano_serie'`) ou `'Outros'` |
+| `total` | `bigint` | Quantidade de redações na série |
+| `nota_media` | `numeric` | Média da nota total nessa série |
+
+### Script SQL (Fase B)
+
+```sql
+-- ============================================================
+-- FASE B: Views de Performance para o Dashboard
+-- Executar no SQL Editor do Supabase
+-- ============================================================
+
+-- View 1: Estatísticas Globais
+CREATE OR REPLACE VIEW public.dashboard_stats AS
+SELECT
+    COUNT(*) AS total_redacoes,
+    COUNT(DISTINCT extra_fields->>'redacao_tema') AS total_modelos,
+    (SELECT COUNT(*) FROM public.revisoes) AS total_revisoes,
+    ROUND(
+        AVG(
+            (
+                SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
+                FROM jsonb_array_elements(
+                    CASE jsonb_typeof(r.evaluated_skills)
+                        WHEN 'array' THEN r.evaluated_skills
+                        ELSE '[]'::jsonb
+                    END
+                ) AS skill
+            )
+        )
+    ) AS nota_media_geral
+FROM public.redacoes r
+WHERE evaluated_skills IS NOT NULL
+  AND jsonb_typeof(evaluated_skills) = 'array';
+
+-- View 2: Médias por Série
+CREATE OR REPLACE VIEW public.dashboard_stats_por_serie AS
+SELECT
+    COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros') AS serie,
+    COUNT(*) AS total,
+    ROUND(
+        AVG(
+            (
+                SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
+                FROM jsonb_array_elements(
+                    CASE jsonb_typeof(r.evaluated_skills)
+                        WHEN 'array' THEN r.evaluated_skills
+                        ELSE '[]'::jsonb
+                    END
+                ) AS skill
+            )
+        )
+    ) AS nota_media
+FROM public.redacoes r
+WHERE evaluated_skills IS NOT NULL
+  AND jsonb_typeof(evaluated_skills) = 'array'
+GROUP BY COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros')
+ORDER BY nota_media DESC;
+```
+
+### Verificar se as views foram criadas
+
+```sql
+SELECT * FROM public.dashboard_stats;
+SELECT * FROM public.dashboard_stats_por_serie LIMIT 10;
+```
+
+---
+
+## 7. Fase D — Sistema de Lock de Redações (Março 2026)
+
+Implementado para evitar que dois corretores revisem a mesma redação simultaneamente.
+
+### Migration SQL (aplicar no Supabase)
+
+```sql
+-- Adicionar colunas de lock na tabela redacoes
+ALTER TABLE public.redacoes
+  ADD COLUMN IF NOT EXISTS locked_by uuid REFERENCES perfis(id),
+  ADD COLUMN IF NOT EXISTS locked_at timestamptz;
+
+-- Função para liberar locks expirados (TTL 30 min)
+-- Pode ser agendada via pg_cron ou chamada manualmente
+CREATE OR REPLACE FUNCTION release_expired_locks()
+RETURNS void AS $$
+  UPDATE public.redacoes
+  SET locked_by = NULL, locked_at = NULL
+  WHERE locked_at < NOW() - INTERVAL '30 minutes';
+$$ LANGUAGE sql SECURITY DEFINER;
+```
+
+### Como funciona
+
+| Evento | Ação |
+|---|---|
+| Corretor abre uma redação | `POST /api/lock` — adquire lock (ou retorna 409 se bloqueado) |
+| Corretor está na mesa (a cada 10 min) | `POST /api/lock` — renova o `locked_at` automaticamente (keepalive) |
+| Corretor salva e finaliza | `DELETE /api/lock` — libera o lock |
+| Corretor sai da mesa | `DELETE /api/lock` — libera o lock |
+| Corretor fecha a aba/browser | `navigator.sendBeacon('/api/lock-release')` — tenta liberar |
+| Lock não renovado por 30 min | `release_expired_locks()` — expira automaticamente |
+
+### Lock na lista de redações
+
+- `useRedacoesList` busca `locked_by` e `locked_at` em cada redação
+- Calcula `isLocked = locked_by != userId && locked_at + 30min > now()`
+- `RedacaoList` exibe badge laranja **"Em uso"** nos itens bloqueados
+
+### Verificar locks ativos
+
+```sql
+SELECT r.id, r.title, r.nick, p.nome AS corretor_nome, r.locked_at,
+       NOW() - r.locked_at AS tempo_lock
+FROM public.redacoes r
+JOIN public.perfis p ON p.id = r.locked_by
+WHERE r.locked_by IS NOT NULL
+  AND r.locked_at > NOW() - INTERVAL '30 minutes'
+ORDER BY r.locked_at DESC;
 ```

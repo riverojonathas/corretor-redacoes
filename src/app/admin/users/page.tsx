@@ -95,7 +95,7 @@ export default function AdminUsersPage() {
     if (authLoading || cargo !== 'admin') {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center p-20 text-gray-400 gap-2">
+                <div className="flex items-center justify-center p-20 text-gray-500 gap-2">
                     <ShieldAlert size={20} className="animate-pulse" />
                     <span>Verificando permissões...</span>
                 </div>
@@ -129,48 +129,48 @@ export default function AdminUsersPage() {
                 </div>
 
                 {/* Filters */}
-                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-6 flex items-center gap-3">
-                    <Search className="text-gray-400" size={20} />
+                <div className="bg-white/40 p-4 rounded-2xl border border-gray-200/50 shadow-sm mb-6 flex items-center gap-3">
+                    <Search className="text-gray-500" size={20} />
                     <input
                         type="text"
                         placeholder="Buscar por nome ou e-mail..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
-                        className="w-full text-sm outline-none text-dark-gray placeholder:text-gray-400"
+                        className="w-full text-sm outline-none text-dark-gray placeholder:text-gray-500"
                     />
                 </div>
 
                 {/* Table */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-white/40 rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100/80">
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Usuário</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Cargo</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider">Data de Cadastro</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider text-right">Ações</th>
+                                <tr className="bg-white/30 border-b border-gray-200/40">
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Usuário</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Cargo</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Data de Cadastro</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider text-right">Ações</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={4} className="py-12 text-center text-gray-400">
+                                        <td colSpan={4} className="py-12 text-center text-gray-500">
                                             Carregando usuários...
                                         </td>
                                     </tr>
                                 ) : filteredUsers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="py-12 text-center text-gray-400">
+                                        <td colSpan={4} className="py-12 text-center text-gray-500">
                                             Nenhum usuário encontrado.
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredUsers.map((user) => (
-                                        <tr key={user.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors group">
+                                        <tr key={user.id} className="border-b border-gray-200/30 hover:bg-black/5 transition-colors group">
                                             <td className="py-4 px-6">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center text-gray-400 shrink-0">
+                                                    <div className="w-10 h-10 rounded-full bg-gray-100 border border-gray-200 overflow-hidden flex items-center justify-center text-gray-500 shrink-0">
                                                         {user.avatar_url ? (
                                                             <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
                                                         ) : (
@@ -179,7 +179,7 @@ export default function AdminUsersPage() {
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-dark-gray text-sm leading-none">{user.nome}</p>
-                                                        <p className="text-xs text-gray-400 mt-1">{user.email}</p>
+                                                        <p className="text-xs text-gray-500 mt-1">{user.email}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -196,14 +196,14 @@ export default function AdminUsersPage() {
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => handleEditClick(user)}
-                                                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                         title="Editar"
                                                     >
                                                         <Edit2 size={16} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeleteUser(user)}
-                                                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                         title="Remover Acesso"
                                                     >
                                                         <Trash2 size={16} />

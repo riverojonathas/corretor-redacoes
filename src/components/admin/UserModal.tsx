@@ -97,7 +97,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 text-gray-400 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors"
+                        className="p-2 text-gray-500 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors"
                     >
                         <X size={20} />
                     </button>
@@ -107,7 +107,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Nome</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nome</label>
                         <input
                             type="text"
                             required
@@ -120,7 +120,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">E-mail</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">E-mail</label>
                         <input
                             type="email"
                             required
@@ -133,7 +133,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Cargo</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Cargo</label>
                         <select
                             value={cargo}
                             onChange={e => setCargo(e.target.value)}
@@ -145,7 +145,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
                             {isEditMode ? 'Nova Senha (opcional)' : 'Senha Inicial'}
                         </label>
                         <div className="relative">
@@ -161,7 +161,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-dark-gray p-1"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-dark-gray p-1"
                             >
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>

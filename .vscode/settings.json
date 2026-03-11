@@ -1,0 +1,18 @@
+{
+  "files.exclude": {
+    "**/.next": true,
+    "**/.vercel": true
+  },
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true,
+    "**/.vercel": true,
+    "**/package-lock.json": true
+  },
+  "files.watcherExclude": {
+    "**/.next/**": true,
+    "**/node_modules/**": true,
+    "**/.vercel/**": true
+  },
+  "typescript.disableAutomaticTypeAcquisition": true
+}

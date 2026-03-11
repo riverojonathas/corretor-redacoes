@@ -26,7 +26,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <div className="flex min-h-screen items-center justify-center bg-gray-50/50">
                 <div className="flex flex-col items-center gap-4">
                     <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-accent-red"></div>
-                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest animate-pulse">Autenticando...</p>
+                    <p className="text-sm font-bold text-gray-500 uppercase tracking-widest animate-pulse">Autenticando...</p>
                 </div>
             </div>
         );

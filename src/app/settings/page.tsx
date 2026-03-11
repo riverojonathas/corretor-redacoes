@@ -2,21 +2,23 @@
 
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { UserCircle, Shield, Layout, Settings as SettingsIcon } from 'lucide-react';
+import { UserCircle, Shield, Layout, Settings as SettingsIcon, LifeBuoy } from 'lucide-react';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { SecuritySettings } from '@/components/settings/SecuritySettings';
 import { WorkspaceSettings } from '@/components/settings/WorkspaceSettings';
+import { MyChamados } from '@/components/settings/MyChamados';
 import { cn } from '@/lib/utils';
 
-type Tab = 'profile' | 'security' | 'workspace';
+type Tab = 'profile' | 'security' | 'workspace' | 'chamados';
 
 export default function SettingsPage() {
     const [activeTab, setActiveTab] = useState<Tab>('profile');
 
-    const tabs = [
+    const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
         { id: 'profile', label: 'Meu Perfil', icon: UserCircle },
         { id: 'security', label: 'Segurança', icon: Shield },
         { id: 'workspace', label: 'Mesa de Correção', icon: Layout },
+        { id: 'chamados', label: 'Meus Chamados', icon: LifeBuoy },
     ];
 
     return (
@@ -43,12 +45,12 @@ export default function SettingsPage() {
                             return (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id as Tab)}
+                                    onClick={() => setActiveTab(tab.id)}
                                     className={cn(
                                         "flex flex-1 items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
                                         isActive
                                             ? "bg-dark-gray text-white shadow-lg shadow-dark-gray/10"
-                                            : "hover:bg-gray-100/80 text-gray-500 hover:text-dark-gray"
+                                            : "hover:bg-white/40 text-gray-500 hover:text-dark-gray"
                                     )}
                                 >
                                     <Icon size={18} className={isActive ? "text-accent-red" : ""} />
@@ -63,6 +65,15 @@ export default function SettingsPage() {
                         {activeTab === 'profile' && <ProfileSettings />}
                         {activeTab === 'security' && <SecuritySettings />}
                         {activeTab === 'workspace' && <WorkspaceSettings />}
+                        {activeTab === 'chamados' && (
+                            <div className="bg-white/40 rounded-3xl border border-gray-200/50 shadow-sm p-6 sm:p-8">
+                                <div className="mb-6">
+                                    <h2 className="text-xl font-bold text-dark-gray">Meus Chamados</h2>
+                                    <p className="text-sm text-gray-500 mt-1">Acompanhe o status das suas sugestões e reportes enviados pela Central de Ajuda.</p>
+                                </div>
+                                <MyChamados />
+                            </div>
+                        )}
                     </div>
 
                 </div>

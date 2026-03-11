@@ -44,7 +44,7 @@ export function WorkspaceSettings() {
                 <p className="text-sm text-gray-500">Configure o comportamento padrão do seu ambiente de trabalho.</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col gap-6">
+            <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col gap-6">
 
                 {/* Reset Onboarding */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -59,7 +59,7 @@ export function WorkspaceSettings() {
                     <button
                         onClick={handleResetTutorial}
                         disabled={loading}
-                        className="bg-gray-50 text-gray-700 hover:bg-gray-100 hover:text-dark-gray border border-gray-200 font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
+                        className="bg-white/40 text-gray-700 hover:bg-black/5 hover:text-dark-gray border border-gray-200/50 font-bold px-4 py-2.5 rounded-xl transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
                     >
                         <RefreshCcw size={16} className={loading ? 'animate-spin' : ''} />
                         Reiniciar Dicas

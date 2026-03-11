@@ -84,10 +84,10 @@ export default function AdminUploadPage() {
                             genre: row.genre,
                             statement: row['evaluated_skills[0].statement'] || row.statement || '',
                             support_text: row.support_text || '',
-                            consumer_init: row.ConsumerInit ? new Date(row.ConsumerInit).toISOString() : null,
-                            consumer_finish: row.ConsumerFinish ? new Date(row.ConsumerFinish).toISOString() : null,
-                            created_at: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
-                            updated_at: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+                            consumer_init: row.ConsumerInit && !isNaN(Date.parse(row.ConsumerInit)) ? new Date(row.ConsumerInit).toISOString() : null,
+                            consumer_finish: row.ConsumerFinish && !isNaN(Date.parse(row.ConsumerFinish)) ? new Date(row.ConsumerFinish).toISOString() : null,
+                            created_at: row.createdAt && !isNaN(Date.parse(row.createdAt)) ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+                            updated_at: row.updatedAt && !isNaN(Date.parse(row.updatedAt)) ? new Date(row.updatedAt).toISOString() : null,
                             evaluated_skills,
                             assessed_skills,
                             extra_fields
@@ -147,12 +147,16 @@ export default function AdminUploadPage() {
         if (file) handleFileUpload(file);
     }, []);
 
-    if (loading || (!user || cargo !== 'admin')) {
+    if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-white">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-red border-t-transparent"></div>
             </div>
         );
+    }
+
+    if (!user || cargo !== 'admin') {
+        return null;
     }
 
     return (
@@ -163,7 +167,7 @@ export default function AdminUploadPage() {
                     <p className="text-gray-500 mt-2">Carregue arquivos CSV para alimentar o banco de dados da plataforma.</p>
                 </div>
 
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
+                <div className="bg-white/40 rounded-2xl border border-gray-200/50 shadow-sm p-8">
                     {message && (
                         <div className={`mb-8 p-4 rounded-xl flex items-center gap-3 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
                             }`}>
@@ -176,8 +180,8 @@ export default function AdminUploadPage() {
                         onDragOver={onDragOver}
                         onDragLeave={onDragLeave}
                         onDrop={onDrop}
-                        className={`relative border-2 border-dashed rounded-2xl p-16 transition-all duration-300 flex flex-col items-center justify-center ${isDragging ? 'border-accent-red bg-accent-red/5 scale-[1.01]' : 'border-gray-200 bg-white'
-                            } ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-gray-300 hover:bg-gray-50/50'}`}
+                        className={`relative border-2 border-dashed rounded-2xl p-16 transition-all duration-300 flex flex-col items-center justify-center ${isDragging ? 'border-accent-red bg-accent-red/5 scale-[1.01]' : 'border-gray-200/50 bg-white/20'
+                            } ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-accent-red/30 hover:bg-black/5'}`}
                         onClick={() => !isUploading && document.getElementById('fileInput')?.click()}
                     >
                         <input
@@ -196,18 +200,18 @@ export default function AdminUploadPage() {
                             </div>
                         ) : (
                             <>
-                                <div className={`p-4 rounded-full mb-6 transition-colors ${isDragging ? 'bg-accent-red text-white' : 'bg-white text-gray-400 shadow-sm'}`}>
+                                <div className={`p-4 rounded-full mb-6 transition-colors ${isDragging ? 'bg-accent-red text-white' : 'bg-white text-gray-500 shadow-sm'}`}>
                                     <UploadIcon size={32} />
                                 </div>
                                 <p className="text-xl font-bold text-dark-gray">
                                     {isDragging ? 'Solte para importar' : 'Arraste seu CSV aqui'}
                                 </p>
-                                <p className="text-sm text-gray-400 mt-2">ou clique para procurar no seu computador</p>
+                                <p className="text-sm text-gray-500 mt-2">ou clique para procurar no seu computador</p>
                             </>
                         )}
                     </div>
 
-                    <div className="mt-10 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+                    <div className="mt-10 bg-white/20 rounded-2xl p-6 border border-gray-200/50 shadow-sm">
                         <div className="flex items-center gap-2 mb-4 text-dark-gray">
                             <Info size={18} className="text-accent-red" />
                             <h4 className="font-bold">Mapa de Colunas Esperadas (Tabela: redacoes)</h4>
@@ -219,15 +223,15 @@ export default function AdminUploadPage() {
 
                             <div className="overflow-x-auto rounded-xl border border-gray-200">
                                 <table className="w-full text-left border-collapse text-xs">
-                                    <thead>
-                                        <tr className="bg-gray-50 text-gray-500">
-                                            <th className="p-3 border-b border-gray-200 font-bold w-1/4">Coluna (Cabeçalho do CSV)</th>
-                                            <th className="p-3 border-b border-gray-200 font-bold w-1/4">Tipo de Dado</th>
-                                            <th className="p-3 border-b border-gray-200 font-bold w-1/2">Descrição</th>
+                                    <thead className="bg-white/30 text-gray-500">
+                                        <tr>
+                                            <th className="p-3 border-b border-gray-200/50 font-bold w-1/4">Coluna (Cabeçalho do CSV)</th>
+                                            <th className="p-3 border-b border-gray-200/50 font-bold w-1/4">Tipo de Dado</th>
+                                            <th className="p-3 border-b border-gray-200/50 font-bold w-1/2">Descrição</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-100 bg-white">
-                                        <tr><td className="p-3 font-mono text-dark-gray">internal_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID originial da redação</td></tr>
+                                    <tbody className="divide-y divide-gray-200/30 bg-transparent">
+                                        <tr><td className="p-3 font-mono text-dark-gray">internal_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID original da redação</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">task_id / answer_id / question_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">IDs de controle e origem</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">external_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID externo (ex: plataforma parceira)</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">nick</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Apelido do aluno</td></tr>
@@ -242,7 +246,7 @@ export default function AdminUploadPage() {
                                     </tbody>
                                 </table>
                             </div>
-                            <p className="text-xs text-gray-400 mt-2 italic">
+                            <p className="text-xs text-gray-500 mt-2 italic">
                                 * Nota: 'id' e 'created_at' são gerados automaticamente pelo sistema. Você não precisa incluí-los no arquivo CSV.
                             </p>
                         </div>

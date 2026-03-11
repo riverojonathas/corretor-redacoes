@@ -9,229 +9,150 @@ import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip
 import {
     CheckCircle2,
     AlertCircle,
-    ChevronRight,
-    User as UserIcon,
     BookOpen,
-    Send,
-    Loader2,
     ArrowLeft,
-    Clock,
-    Check,
-    Star,
     X,
     Highlighter,
-    Pin,
-    PinOff,
-    Move,
-    ClipboardList,
-    GraduationCap,
-    Save,
-    Inbox
+    HelpCircle,
+    Lock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Redacao, RedacaoListItem, Highlight, Criterio } from '@/types/dashboard';
+import { sanitizeTextWithHighlights } from '@/lib/textUtils';
+import { useCorrectionState } from '@/hooks/useCorrectionState';
+import { useRedacoesList } from '@/hooks/useRedacoesList';
+import { useLock } from '@/hooks/useLock';
+import { RedacaoList } from './RedacaoList';
+import { CorrectionHeader } from './CorrectionHeader';
+import { FloatingToolbar, FixedToolbar } from './HighlightTools';
+import { CriterioPanel } from './CriterioPanel';
+import { CriterioInfoModal } from './CriterioInfoModal';
+import { ExitConfirmModal } from './ExitConfirmModal';
 
-interface Redacao {
-    id: string;
-    internal_id: string;
-    nick: string;
-    title: string;
-    essay: string;
-    genre: string;
-    statement: string;
-    support_text: string;
-    evaluated_skills?: { score: number; comment: string; statement?: string }[];
-    assessed_skills?: { statement: string; description: string }[];
-    extra_fields?: { redacao_tema?: string; redacao_ano_serie: string; cd_tipo_ensino?: string; nm_tipo_ensino?: string };
-}
-
-interface RedacaoListItem {
-    id: string;
-    titulo: string;
-    nick: string;
-    nr_serie: string;
-    status: 'pendente' | 'corrigida' | 'rascunho' | 'concluida';
-    revisao_id?: string;
-    favorita?: boolean;
-    model_id?: string;
-    titulo_modelo?: string;
-    nm_tipo_ensino?: string;
-    answer_id?: string;
-}
-
-interface Highlight {
-    id?: string;
-    revisao_id?: string;
-    criterio_id: number;
-    cor: string;
-    start_index: number;
-    end_index: number;
-    texto_marcado: string;
-    observacao: string;
-    target?: 'texto' | 'devolutiva';
-}
-
-const CRITERIOS = [
-    { id: 1, name: 'Competência 1', desc: 'Domínio da norma culta' },
-    { id: 2, name: 'Competência 2', desc: 'Compreender a proposta' },
-    { id: 3, name: 'Competência 3', desc: 'Selecionar e organizar info' },
-    { id: 4, name: 'Competência 4', desc: 'Conhecimento linguístico' },
-    { id: 5, name: 'Competência 5', desc: 'Proposta de intervenção' },
+const defaultCriterios: Criterio[] = [
+    { id: 1, name: 'Critério 1', desc: 'Domínio da norma culta', full_desc: '' },
+    { id: 2, name: 'Critério 2', desc: 'Compreender a proposta', full_desc: '' },
+    { id: 3, name: 'Critério 3', desc: 'Selecionar e organizar info', full_desc: '' },
+    { id: 4, name: 'Critério 4', desc: 'Conhecimento linguístico', full_desc: '' },
+    { id: 5, name: 'Critério 5', desc: 'Proposta de intervenção', full_desc: '' },
 ];
 
 export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) {
     const { user } = useAuth();
     const router = useRouter();
 
-    // View state
+    // ── View State ──────────────────────────────────────────
     const [view, setView] = useState<'list' | 'correction'>('list');
-    const [listaRedacoes, setListaRedacoes] = useState<RedacaoListItem[]>([]);
-    const [loadingLista, setLoadingLista] = useState(true);
 
-    // Correction state
+    // ── Lista com filtros server-side (hook) ────────────────
+    const {
+        lista: listaRedacoes,
+        loading: loadingLista,
+        hasMore,
+        filters,
+        setFilters,
+        loadMore,
+    } = useRedacoesList(user?.id);
+
+    // ── Correction State ────────────────────────────────────
     const [redacao, setRedacao] = useState<Redacao | null>(null);
     const [loadingRedacao, setLoadingRedacao] = useState(false);
     const [notFoundError, setNotFoundError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    const [highlights, setHighlights] = useState<Highlight[]>([]);
-    const [highlightPopup, setHighlightPopup] = useState<{ visible: boolean, x: number, y: number, start: number, end: number, text: string, target: 'texto' | 'devolutiva', targetId?: number, editIndex?: number } | null>(null);
+    // ── Extracted hook ─────────────────────────────────────
+    const {
+        formData, setFormData,
+        highlights, setHighlights,
+        showExitConfirm, setShowExitConfirm,
+        isDirty, resetForm, syncPristine,
+    } = useCorrectionState();
+
+    // ── Lock / Atribuição (Fase D) ─────────────────────────
+    const { acquireLock, releaseLock } = useLock(user?.id);
+    const [lockBlocked, setLockBlocked] = useState(false);
+
+    // ── Highlight Popup State ──────────────────────────────
+    const [highlightPopup, setHighlightPopup] = useState<{
+        visible: boolean; x: number; y: number;
+        start: number; end: number; text: string;
+        target: 'texto' | 'devolutiva'; targetId?: number; editIndex?: number;
+    } | null>(null);
     const [highlightFormData, setHighlightFormData] = useState({ criterio_id: 1, cor: 'amarelo', observacao: '' });
     const [filterHighlightCriterio, setFilterHighlightCriterio] = useState<number | 'all'>('all');
 
-    // Toolbar UX State
+    // ── Toolbar / UI State ──────────────────────────────────
     const [toolbarMode, setToolbarMode] = useState<'fixed' | 'floating'>('floating');
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-
     const textContainerRef = React.useRef<HTMLDivElement>(null);
 
-    // Form state
-    const [formData, setFormData] = useState({
-        criterio_1_tema_1: '',
-        criterio_1_tema_2: '',
-        criterio_1_tema_3: '',
-        criterio_1_observacao: '',
-        criterio_2_tema_1: '',
-        criterio_2_tema_2: '',
-        criterio_2_tema_3: '',
-        criterio_2_observacao: '',
-        criterio_3_tema_1: '',
-        criterio_3_tema_2: '',
-        criterio_3_tema_3: '',
-        criterio_3_observacao: '',
-        criterio_4_tema_1: '',
-        criterio_4_tema_2: '',
-        criterio_4_tema_3: '',
-        criterio_4_observacao: '',
-        criterio_5_tema_1: '',
-        criterio_5_tema_2: '',
-        criterio_5_tema_3: '',
-        criterio_5_observacao: '',
-        comentario_geral: '',
-        favorita: false
-    });
-
-    const [filterNick, setFilterNick] = useState('');
-    const [filterSerie, setFilterSerie] = useState('');
-    const [filterTitulo, setFilterTitulo] = useState('');
-    const [filterFavorita, setFilterFavorita] = useState(false);
-
-    // Accordion UI State
+    // ── Accordion / Info Modal State ────────────────────────
     const [activeCriterio, setActiveCriterio] = useState<number>(1);
-
-    // Readability State
     const [readMode, setReadMode] = useState<boolean>(false);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState<boolean>(false);
+    const [openTema, setOpenTema] = useState<Record<number, number | null>>({});
+
+    // ── Criterios (memoized) ────────────────────────────────
+    const criterios = React.useMemo(() => {
+        if (redacao?.assessed_skills && redacao.assessed_skills.length > 0) {
+            return redacao.assessed_skills.map((s, idx) => ({
+                id: idx + 1,
+                name: `Critério ${idx + 1}`,
+                desc: s.statement,
+                full_desc: s.description
+            }));
+        }
+        return defaultCriterios.map(c => ({ ...c, full_desc: '' }));
+    }, [redacao]);
 
     const getCriterioStatus = (criterioId: number) => {
-        const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
-        const t2 = (formData as any)[`criterio_${criterioId}_tema_2`];
-        const t3 = (formData as any)[`criterio_${criterioId}_tema_3`];
-
-        const answeredCount = [t1, t2, t3].filter(val => val && val.toString().trim() !== '').length;
-
-        if (answeredCount === 3) return 'complete';
-        if (answeredCount > 0) return 'partial';
+        const vals = [1, 2, 3, 4].map(t => (formData as any)[`criterio_${criterioId}_tema_${t}`]);
+        const answered = vals.filter(v => v && v.toString().trim() !== '').length;
+        if (answered === 4) return 'complete';
+        if (answered > 0) return 'partial';
         return 'empty';
     };
 
-    const isAllComplete = CRITERIOS.every(c => getCriterioStatus(c.id) === 'complete');
+    const isAllComplete = criterios.every(c => getCriterioStatus(c.id) === 'complete');
 
-    const fetchLista = useCallback(async () => {
-        if (!user) return;
-        setLoadingLista(true);
-        try {
-            const { data: redacoes, error } = await supabase
-                .from('redacoes')
-                .select('id, title, nick, extra_fields, answer_id, revisoes(id, corretor_id, favorita, status)')
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-
-            if (redacoes) {
-                const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
-                    const rev = r.revisoes?.find((rev: any) => rev.corretor_id === user.id);
-                    const extras = r.extra_fields || {};
-                    return {
-                        id: r.id,
-                        titulo: r.title || 'Sem Título',
-                        nick: r.nick,
-                        nr_serie: extras.redacao_ano_serie,
-                        titulo_modelo: extras.redacao_tema,
-                        nm_tipo_ensino: extras.nm_tipo_ensino,
-                        answer_id: r.answer_id,
-                        status: rev ? (rev.status || 'concluida') : 'pendente',
-                        revisao_id: rev?.id,
-                        favorita: rev?.favorita || false
-                    };
-                });
-                setListaRedacoes(formatadas);
-            }
-        } catch (err) {
-            console.error('Erro ao buscar lista:', err);
-        } finally {
-            setLoadingLista(false);
+    // ── Exit Handler ────────────────────────────────────────
+    const handleExitMesa = useCallback(async (force = false) => {
+        if (!force && isDirty()) { setShowExitConfirm(true); return; }
+        setShowExitConfirm(false);
+        // Libera o lock ao sair
+        if (redacao) await releaseLock(redacao.id);
+        setLockBlocked(false);
+        if (initialAnswerId) {
+            router.push('/dashboard');
+        } else {
+            setView('list');
+            setHighlightPopup(null);
+            setRedacao(null);
+            if (window.location.pathname.includes('/dashboard/revisao')) router.push('/dashboard');
         }
-    }, [user]);
+    }, [isDirty, initialAnswerId, router, redacao, releaseLock]);
 
+    // ── Inicialização: se tem answer_id direto, vai pra correção ─
     useEffect(() => {
         if (!user) return;
-
         if (initialAnswerId) {
             setView('correction');
             loadInitialAnswer(initialAnswerId);
-        } else if (view === 'list') {
-            fetchLista();
         }
-    }, [view, fetchLista, initialAnswerId, user]);
+    }, [initialAnswerId, user]);
 
     const loadInitialAnswer = async (answerId: string) => {
         setLoadingRedacao(true);
         setNotFoundError(false);
-
         try {
-            // First find the redacao by answer_id
             const { data: redacaoData, error: redacaoError } = await supabase
-                .from('redacoes')
-                .select('id')
-                .eq('answer_id', answerId)
-                .single();
-
-            if (redacaoError || !redacaoData) {
-                setNotFoundError(true);
-                return;
-            }
-
-            // If found, load it normally by internal ID
-            // Check if there is already a revisao for this user
+                .from('redacoes').select('id').eq('answer_id', answerId).single();
+            if (redacaoError || !redacaoData) { setNotFoundError(true); return; }
             const { data: revData } = await supabase
-                .from('revisoes')
-                .select('id')
-                .eq('redacao_id', redacaoData.id)
-                .eq('corretor_id', user!.id)
-                .single();
-
+                .from('revisoes').select('id')
+                .eq('redacao_id', redacaoData.id).eq('corretor_id', user!.id).single();
             await handleSelectRedacao(redacaoData.id, revData?.id);
-
         } catch (err) {
             console.error('Erro ao buscar redação por answer_id:', err);
             setNotFoundError(true);
@@ -242,83 +163,94 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     const handleSelectRedacao = async (id: string, revisaoId?: string) => {
         if (!user) return;
+
+        // ── Fase D: Tentar adquirir o lock ─────────────────
+        const lockResult = await acquireLock(id);
+        if (lockResult.status === 'blocked') {
+            setLockBlocked(true);
+            setView('correction');
+            toast.warning('⚠️ Esta redação está sendo revisada por outro corretor no momento.');
+            return;
+        }
+        if (lockResult.status === 'error') {
+            // Lock falhou mas permite continuar (degradação graciosa)
+            console.warn('Lock não adquirido:', lockResult.message);
+        }
+
+        setLockBlocked(false);
         setView('correction');
         setLoadingRedacao(true);
-
         try {
-            // Busca os dados da redação
             const { data: redacaoData, error: redacaoError } = await supabase
-                .from('redacoes')
-                .select('*')
-                .eq('id', id)
-                .single();
-
+                .from('redacoes').select('*').eq('id', id).single();
             if (redacaoError) throw redacaoError;
-            setRedacao(redacaoData);
 
-            // Se tem revisão feita por esse corretor, popula o form
+            let finalSkills = (redacaoData.evaluated_skills || []).map((s: any) => {
+                if (!s.comment) return s;
+                const { text: cleanComment } = sanitizeTextWithHighlights(s.comment, []);
+                return { ...s, comment: cleanComment };
+            });
+
+            const processedRedacao = { ...redacaoData, evaluated_skills: finalSkills };
+            setRedacao(processedRedacao);
+
             if (revisaoId) {
                 const { data: revData, error: revError } = await supabase
-                    .from('revisoes')
-                    .select('*, revisao_destaques(*)')
-                    .eq('id', revisaoId)
-                    .single();
-
+                    .from('revisoes').select('*, revisao_destaques(*)').eq('id', revisaoId).single();
                 if (!revError && revData) {
-                    setFormData({
-                        criterio_1_tema_1: revData.criterio_1_tema_1 || '',
-                        criterio_1_tema_2: revData.criterio_1_tema_2 || '',
-                        criterio_1_tema_3: revData.criterio_1_tema_3 || '',
+                    const baseForm: Record<string, any> = {
+                        criterio_1_tema_1: revData.criterio_1_tema_1 || '', criterio_1_tema_2: revData.criterio_1_tema_2 || '',
+                        criterio_1_tema_3: revData.criterio_1_tema_3 || '', criterio_1_tema_4: revData.criterio_1_tema_4 || '',
                         criterio_1_observacao: revData.criterio_1_observacao || '',
-                        criterio_2_tema_1: revData.criterio_2_tema_1 || '',
-                        criterio_2_tema_2: revData.criterio_2_tema_2 || '',
-                        criterio_2_tema_3: revData.criterio_2_tema_3 || '',
+                        criterio_2_tema_1: revData.criterio_2_tema_1 || '', criterio_2_tema_2: revData.criterio_2_tema_2 || '',
+                        criterio_2_tema_3: revData.criterio_2_tema_3 || '', criterio_2_tema_4: revData.criterio_2_tema_4 || '',
                         criterio_2_observacao: revData.criterio_2_observacao || '',
-                        criterio_3_tema_1: revData.criterio_3_tema_1 || '',
-                        criterio_3_tema_2: revData.criterio_3_tema_2 || '',
-                        criterio_3_tema_3: revData.criterio_3_tema_3 || '',
+                        criterio_3_tema_1: revData.criterio_3_tema_1 || '', criterio_3_tema_2: revData.criterio_3_tema_2 || '',
+                        criterio_3_tema_3: revData.criterio_3_tema_3 || '', criterio_3_tema_4: revData.criterio_3_tema_4 || '',
                         criterio_3_observacao: revData.criterio_3_observacao || '',
-                        criterio_4_tema_1: revData.criterio_4_tema_1 || '',
-                        criterio_4_tema_2: revData.criterio_4_tema_2 || '',
-                        criterio_4_tema_3: revData.criterio_4_tema_3 || '',
+                        criterio_4_tema_1: revData.criterio_4_tema_1 || '', criterio_4_tema_2: revData.criterio_4_tema_2 || '',
+                        criterio_4_tema_3: revData.criterio_4_tema_3 || '', criterio_4_tema_4: revData.criterio_4_tema_4 || '',
                         criterio_4_observacao: revData.criterio_4_observacao || '',
-                        criterio_5_tema_1: revData.criterio_5_tema_1 || '',
-                        criterio_5_tema_2: revData.criterio_5_tema_2 || '',
-                        criterio_5_tema_3: revData.criterio_5_tema_3 || '',
+                        criterio_5_tema_1: revData.criterio_5_tema_1 || '', criterio_5_tema_2: revData.criterio_5_tema_2 || '',
+                        criterio_5_tema_3: revData.criterio_5_tema_3 || '', criterio_5_tema_4: revData.criterio_5_tema_4 || '',
                         criterio_5_observacao: revData.criterio_5_observacao || '',
                         comentario_geral: revData.comentario_geral || '',
-                        favorita: revData.favorita || false
+                        favorita: revData.favorita || false,
+                        suspeita_ia: revData.suspeita_ia || false,
+                        motivo_suspeita_ia: revData.motivo_suspeita_ia || ''
+                    };
+                    let dynamicData: any = {};
+                    if (revData.avaliacoes && Array.isArray(revData.avaliacoes)) {
+                        revData.avaliacoes.forEach((av: any) => {
+                            dynamicData[`criterio_${av.criterio_id}_tema_1`] = av.tema_1 || '';
+                            dynamicData[`criterio_${av.criterio_id}_tema_2`] = av.tema_2 || '';
+                            dynamicData[`criterio_${av.criterio_id}_tema_3`] = av.tema_3 || '';
+                            dynamicData[`criterio_${av.criterio_id}_observacao`] = av.observacao || '';
+                        });
+                    }
+                    const mergedForm = { ...baseForm, ...dynamicData };
+                    setFormData(mergedForm as any);
+
+                    const { text: cleanEssay, highlights: cleanHighlights } = sanitizeTextWithHighlights(
+                        redacaoData.essay,
+                        revData.revisao_destaques?.filter((h: any) => !h.target || h.target === 'texto') || []
+                    );
+                    const devHighlightsRaw = revData.revisao_destaques?.filter((h: any) => h.target === 'devolutiva') || [];
+                    let cleanDevHighlights: Highlight[] = [];
+                    const cleanSkills = (redacaoData.evaluated_skills || []).map((s: any, idx: number) => {
+                        if (!s.comment) return s;
+                        const skillHls = devHighlightsRaw.filter((h: any) => h.criterio_id === idx + 1);
+                        const { text: cleanComment, highlights: processedSkillHls } = sanitizeTextWithHighlights(s.comment, skillHls);
+                        cleanDevHighlights = [...cleanDevHighlights, ...processedSkillHls];
+                        return { ...s, comment: cleanComment };
                     });
-                    setHighlights(revData.revisao_destaques || []);
+                    setRedacao({ ...processedRedacao, essay: cleanEssay, evaluated_skills: cleanSkills });
+                    const allHls = [...cleanHighlights, ...cleanDevHighlights];
+                    setHighlights(allHls);
+                    syncPristine(mergedForm as any, allHls);
                 }
             } else {
-                // Reset form
-                setHighlights([]);
-                setHighlightPopup(null);
-                setFormData({
-                    criterio_1_tema_1: '',
-                    criterio_1_tema_2: '',
-                    criterio_1_tema_3: '',
-                    criterio_1_observacao: '',
-                    criterio_2_tema_1: '',
-                    criterio_2_tema_2: '',
-                    criterio_2_tema_3: '',
-                    criterio_2_observacao: '',
-                    criterio_3_tema_1: '',
-                    criterio_3_tema_2: '',
-                    criterio_3_tema_3: '',
-                    criterio_3_observacao: '',
-                    criterio_4_tema_1: '',
-                    criterio_4_tema_2: '',
-                    criterio_4_tema_3: '',
-                    criterio_4_observacao: '',
-                    criterio_5_tema_1: '',
-                    criterio_5_tema_2: '',
-                    criterio_5_tema_3: '',
-                    criterio_5_observacao: '',
-                    comentario_geral: '',
-                    favorita: false
-                });
+                resetForm();
             }
         } catch (err) {
             console.error('Erro ao buscar redação:', err);
@@ -331,114 +263,77 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const handleSaveRevisao = async (e: React.FormEvent, isDraft: boolean) => {
         e.preventDefault();
         if (!redacao || !user) return;
-
         if (!isDraft && !isAllComplete) {
             toast.error('Preencha todos os campos obrigatórios para finalizar a revisão.');
             return;
         }
-
         setSubmitting(true);
         try {
-            // Verifica se ja existe revisao desse corretor
             const { data: revData } = await supabase
-                .from('revisoes')
-                .select('id')
-                .eq('redacao_id', redacao.id)
-                .eq('corretor_id', user.id)
-                .single();
-
+                .from('revisoes').select('id')
+                .eq('redacao_id', redacao.id).eq('corretor_id', user.id).single();
             let finalRevisaoId = revData?.id;
-
+            const avaliacoes = criterios.map(c => ({
+                criterio_id: c.id,
+                tema_1: (formData as any)[`criterio_${c.id}_tema_1`],
+                tema_2: (formData as any)[`criterio_${c.id}_tema_2`],
+                tema_3: (formData as any)[`criterio_${c.id}_tema_3`],
+                tema_4: (formData as any)[`criterio_${c.id}_tema_4`],
+                observacao: (formData as any)[`criterio_${c.id}_observacao`]
+            }));
             if (revData?.id) {
-                // Update
-                const { error } = await supabase
-                    .from('revisoes')
-                    .update({
-                        ...formData,
-                        status: isDraft ? 'rascunho' : 'concluida',
-                        data_correcao: new Date().toISOString()
-                    })
-                    .eq('id', revData.id);
+                const { error } = await supabase.from('revisoes').update({
+                    ...formData, avaliacoes, status: isDraft ? 'rascunho' : 'concluida',
+                    data_correcao: new Date().toISOString()
+                }).eq('id', revData.id);
                 if (error) throw error;
             } else {
-                // Insert
-                const { data: insertResult, error } = await supabase
-                    .from('revisoes')
-                    .insert([{
-                        redacao_id: redacao.id,
-                        corretor_id: user.id,
-                        ...formData,
-                        status: isDraft ? 'rascunho' : 'concluida',
-                        data_correcao: new Date().toISOString()
-                    }])
-                    .select('id').single();
+                const { data: insertResult, error } = await supabase.from('revisoes').insert([{
+                    redacao_id: redacao.id, corretor_id: user.id,
+                    ...formData, avaliacoes, status: isDraft ? 'rascunho' : 'concluida',
+                    data_correcao: new Date().toISOString()
+                }]).select('id').single();
                 if (error) throw error;
                 finalRevisaoId = insertResult.id;
             }
-
             if (finalRevisaoId) {
                 await supabase.from('revisao_destaques').delete().eq('revisao_id', finalRevisaoId);
                 if (highlights.length > 0) {
-                    const toInsert = highlights.map(h => {
-                        const payload: any = {
-                            revisao_id: finalRevisaoId,
-                            criterio_id: h.criterio_id,
-                            cor: h.cor,
-                            start_index: h.start_index,
-                            end_index: h.end_index,
-                            texto_marcado: h.texto_marcado,
-                            observacao: h.observacao || ''
-                        };
-                        return payload;
-                    });
-
+                    const toInsert = highlights.map(h => ({
+                        revisao_id: finalRevisaoId, criterio_id: h.criterio_id, cor: h.cor,
+                        start_index: h.start_index, end_index: h.end_index,
+                        texto_marcado: h.texto_marcado, observacao: h.observacao || ''
+                    }));
                     const { error: insertError } = await supabase.from('revisao_destaques').insert(toInsert);
-                    if (insertError) {
-                        console.error('Falha ao salvar destaques:', insertError);
-                        throw new Error('As avaliações foram salvas, mas os grifos falharam: ' + insertError.message);
-                    }
+                    if (insertError) throw new Error('As avaliações foram salvas, mas os grifos falharam: ' + insertError.message);
                 }
             }
-
             toast.success(isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!');
-
-            // Voltar pra lista apenas se estiver finalizando a revisão
+            syncPristine(formData as any, highlights);
             if (!isDraft) {
-                setTimeout(() => {
-                    setView('list');
-                }, 2000);
+                // Libera o lock ao finalizar
+                if (redacao) await releaseLock(redacao.id);
+                setTimeout(() => handleExitMesa(), 2000);
             }
-
         } catch (error: any) {
-            console.error('Erro ao salvar:', JSON.stringify(error, null, 2), error);
-            toast.error('Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido. Verifique o console.'));
+            console.error('Erro ao salvar:', error);
+            toast.error('Erro ao salvar revisão: ' + (error?.message || 'Erro desconhecido.'));
         } finally {
             setSubmitting(false);
         }
     };
 
-    const redacoesFiltradas = listaRedacoes.filter((r: any) => {
-        const matchNick = r.nick.toLowerCase().includes(filterNick.toLowerCase());
-        const matchSerie = r.nr_serie.toLowerCase().includes(filterSerie.toLowerCase());
-        const matchTitulo = r.titulo.toLowerCase().includes(filterTitulo.toLowerCase());
-        const matchFavorita = filterFavorita ? r.favorita === true : true;
-        return matchNick && matchSerie && matchTitulo && matchFavorita;
-    });
-
+    // ── Highlight Handlers ──────────────────────────────────
     const handleTextSelection = (e: React.MouseEvent) => {
         const sel = window.getSelection();
         if (!sel || sel.isCollapsed || !textContainerRef.current) {
             if (highlightPopup?.visible && !e.defaultPrevented) setHighlightPopup(null);
             return;
         }
-
-        // Check if selection is inside the main text OR inside a devolutiva box
         const isMainText = textContainerRef.current.contains(sel.anchorNode);
-
         let containerNode = sel.anchorNode?.parentElement;
         let isDevolutivaText = false;
         let devolutivaCriterioId = 1;
-
         while (containerNode && containerNode !== document.body) {
             if (containerNode.hasAttribute('data-devolutiva')) {
                 isDevolutivaText = true;
@@ -447,44 +342,21 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             }
             containerNode = containerNode.parentElement;
         }
-
         if (!isMainText && !isDevolutivaText) return;
-
         const range = sel.getRangeAt(0);
         const preSelectionRange = range.cloneRange();
-
-        // Use the correct container for offset calculation
         const rootContainer = isDevolutivaText ? containerNode! : textContainerRef.current;
-
         preSelectionRange.selectNodeContents(rootContainer);
         preSelectionRange.setEnd(range.startContainer, range.startOffset);
         const start = preSelectionRange.toString().length;
         const text = range.toString();
         const end = start + text.length;
-
         const rect = range.getBoundingClientRect();
-
         setHighlightPopup(prev => {
             if (prev?.visible && toolbarMode === 'floating') {
-                return {
-                    ...prev,
-                    start,
-                    end,
-                    text,
-                    target: isDevolutivaText ? 'devolutiva' : 'texto',
-                    targetId: isDevolutivaText ? devolutivaCriterioId : undefined
-                };
+                return { ...prev, start, end, text, target: isDevolutivaText ? 'devolutiva' : 'texto', targetId: isDevolutivaText ? devolutivaCriterioId : undefined };
             }
-            return {
-                visible: true,
-                x: rect.left + (rect.width / 2) - 160,
-                y: rect.top - 250,
-                start,
-                end,
-                text,
-                target: isDevolutivaText ? 'devolutiva' : 'texto',
-                targetId: isDevolutivaText ? devolutivaCriterioId : undefined
-            };
+            return { visible: true, x: rect.left + (rect.width / 2) - 160, y: rect.top - 250, start, end, text, target: isDevolutivaText ? 'devolutiva' : 'texto', targetId: isDevolutivaText ? devolutivaCriterioId : undefined };
         });
     };
 
@@ -492,7 +364,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         e.preventDefault();
         e.stopPropagation();
         if (!highlightPopup) return;
-
         const newH: Highlight = {
             criterio_id: highlightPopup.target === 'devolutiva' ? highlightPopup.targetId! : highlightFormData.criterio_id,
             cor: highlightFormData.cor,
@@ -502,7 +373,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             observacao: highlightFormData.observacao,
             target: highlightPopup.target
         };
-
         if (highlightPopup.editIndex !== undefined) {
             const newHList = [...highlights];
             newHList[highlightPopup.editIndex] = newH;
@@ -510,7 +380,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         } else {
             setHighlights([...highlights, newH]);
         }
-
         setHighlightPopup(null);
         setHighlightFormData({ criterio_id: 1, cor: 'amarelo', observacao: '' });
         window.getSelection()?.removeAllRanges();
@@ -525,48 +394,25 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     const handleEditHighlight = (e: React.MouseEvent, index: number, h: Highlight) => {
         e.stopPropagation();
-        setHighlightFormData({
-            criterio_id: h.criterio_id,
-            cor: h.cor,
-            observacao: h.observacao || ''
-        });
+        setHighlightFormData({ criterio_id: h.criterio_id, cor: h.cor, observacao: h.observacao || '' });
         setHighlightPopup({
-            visible: true,
-            x: e.clientX,
-            y: e.clientY,
-            start: h.start_index,
-            end: h.end_index,
-            text: h.texto_marcado,
-            target: h.target || 'texto',
-            targetId: h.target === 'devolutiva' ? h.criterio_id : undefined,
-            editIndex: index
+            visible: true, x: e.clientX, y: e.clientY,
+            start: h.start_index, end: h.end_index, text: h.texto_marcado,
+            target: h.target || 'texto', targetId: h.target === 'devolutiva' ? h.criterio_id : undefined, editIndex: index
         });
     };
 
-    // Drag events for floating toolbar
+    // ── Drag (floating toolbar) ─────────────────────────────
     const handleDragStart = (e: React.MouseEvent) => {
         if (!highlightPopup) return;
         setIsDragging(true);
-        // Calculate where inside the popup the user clicked
-        setDragOffset({
-            x: e.clientX - highlightPopup.x,
-            y: e.clientY - highlightPopup.y
-        });
+        setDragOffset({ x: e.clientX - highlightPopup.x, y: e.clientY - highlightPopup.y });
     };
-
     const handleDragMove = (e: React.MouseEvent) => {
         if (!isDragging || !highlightPopup) return;
-        setHighlightPopup({
-            ...highlightPopup,
-            x: e.clientX - dragOffset.x,
-            y: e.clientY - dragOffset.y
-        });
+        setHighlightPopup({ ...highlightPopup, x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y });
     };
-
-    const handleDragEnd = () => {
-        setIsDragging(false);
-    };
-
+    const handleDragEnd = () => setIsDragging(false);
     useEffect(() => {
         if (isDragging) {
             window.addEventListener('mousemove', handleDragMove as any);
@@ -581,59 +427,41 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         };
     }, [isDragging, highlightPopup, dragOffset]);
 
+    // ── Render Text With Highlights ─────────────────────────
     const renderTextWithHighlights = (text: string, isDevolutiva: boolean = false, devolutivaCriterioId: number = 0) => {
         if (!text) return null;
-
         let applicableHighlights = highlights;
-
-        // If it's a devolutiva, only show highlights made inside this specific devolutiva
         if (isDevolutiva) {
             applicableHighlights = highlights.filter(h => h.criterio_id === devolutivaCriterioId && h.target === 'devolutiva');
         } else {
-            // If it's the main text, only show highlights made in the main text (target = 'texto' or missing for backwards compatibility)
             applicableHighlights = highlights.filter(h => !h.target || h.target === 'texto');
             if (filterHighlightCriterio !== 'all') {
                 applicableHighlights = applicableHighlights.filter(h => h.criterio_id === filterHighlightCriterio);
             }
         }
-
         if (applicableHighlights.length === 0) return <>{text}</>;
-
         const sorted = [...applicableHighlights].sort((a, b) => a.start_index - b.start_index);
-
         let lastIndex = 0;
         const elements = [];
-
         for (let i = 0; i < sorted.length; i++) {
             const h = sorted[i];
-            if (h.start_index > lastIndex) {
-                elements.push(<span key={`text-${i}`}>{text.substring(lastIndex, h.start_index)}</span>);
-            }
-
+            if (h.start_index > lastIndex) elements.push(<span key={`text-${i}`}>{text.substring(lastIndex, h.start_index)}</span>);
             const colorClass = h.cor === 'verde' ? 'bg-green-200 text-green-900 group-hover:bg-green-300' :
                 h.cor === 'vermelho' ? 'bg-red-200 text-red-900 group-hover:bg-red-300' :
                     'bg-yellow-200 text-yellow-900 group-hover:bg-yellow-300';
-
             const actualStart = Math.max(lastIndex, h.start_index);
             if (actualStart < h.end_index) {
                 elements.push(
-                    <mark
-                        key={`mark-${i}`}
-                        className={cn('relative group cursor-pointer rounded px-0.5 transition-colors', colorClass)}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (!isDevolutiva) setFilterHighlightCriterio(h.criterio_id);
-                        }}
-                    >
+                    <mark key={`mark-${i}`} className={cn('relative group cursor-pointer rounded px-0.5 transition-colors', colorClass)}
+                        onClick={(e) => { e.stopPropagation(); if (!isDevolutiva) setFilterHighlightCriterio(h.criterio_id); }}>
                         {text.substring(actualStart, h.end_index)}
-
                         <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col w-64 bg-gray-800 text-white text-xs rounded-xl p-3.5 z-10 shadow-xl opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-200">
                             <span className="flex items-center justify-between mb-2 pb-2 border-b border-gray-700">
                                 <span className="font-bold flex items-center gap-1.5"><BookOpen size={12} /> Critério {h.criterio_id}</span>
                                 <div className="flex gap-1 z-50">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-400 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" aria-label="Editar Destaque">
+                                            <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-500 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" aria-label="Editar Destaque">
                                                 <Highlighter size={12} />
                                             </button>
                                         </TooltipTrigger>
@@ -641,7 +469,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" aria-label="Remover Destaque">
+                                            <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-500 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" aria-label="Remover Destaque">
                                                 <X size={12} />
                                             </button>
                                         </TooltipTrigger>
@@ -649,8 +477,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     </Tooltip>
                                 </div>
                             </span>
-                            <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-400">Sem observação.</i>}</span>
-
+                            <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-500">Sem observação.</i>}</span>
                             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></span>
                         </span>
                     </mark>
@@ -658,194 +485,54 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 lastIndex = Math.max(lastIndex, h.end_index);
             }
         }
-
-        if (lastIndex < text.length) {
-            elements.push(<span key={`text-end`}>{text.substring(lastIndex)}</span>);
-        }
-
+        if (lastIndex < text.length) elements.push(<span key="text-end">{text.substring(lastIndex)}</span>);
         return elements;
     };
 
+    // ── Render: Lista ───────────────────────────────────────
     if (view === 'list') {
-        if (initialAnswerId && notFoundError) {
-            return (
-                <div className="flex-1 flex items-center justify-center p-8 bg-gray-50 bg-pattern min-h-[calc(100vh-64px)]">
-                    <div className="bg-white p-12 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100 flex flex-col items-center">
-                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                            <AlertCircle size={40} className="text-accent-red" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-dark-gray mb-3">Redação não encontrada</h2>
-                        <p className="text-gray-500 mb-8 leading-relaxed">Não foi possível localizar nenhuma redação com o ID fornecido (<code className="bg-gray-100 px-2 py-1 rounded text-accent-red font-mono text-xs">{initialAnswerId}</code>) na base de dados.</p>
-
-                        <button
-                            onClick={() => window.location.href = '/dashboard/revisao'}
-                            className="bg-dark-gray text-white font-bold py-3 px-8 rounded-xl hover:bg-black transition-colors w-full flex items-center justify-center gap-2"
-                        >
-                            <ArrowLeft size={18} />
-                            Fila de Revisão
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
         return (
-            <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)] bg-gray-50/30">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-dark-gray">Fila de Revisão</h1>
-                        <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
-                    </div>
+            <RedacaoList
+                lista={listaRedacoes}
+                loading={loadingLista}
+                hasMore={hasMore}
+                filters={filters}
+                onFilterChange={setFilters}
+                onLoadMore={loadMore}
+                initialAnswerId={initialAnswerId}
+                notFoundError={notFoundError}
+                onSelectRedacao={handleSelectRedacao}
+                onGoToRevision={(answerId) => router.push(`/dashboard/revisao/${answerId}`)}
+            />
+        );
+    }
+
+    // ── Render: Redação em uso por outro corretor ────────────
+    if (lockBlocked) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-[#fdfaf2] text-center px-4">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 shadow-inner">
+                    <Lock className="h-10 w-10 text-amber-500" />
                 </div>
-
-                {/* Filtros */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
-                    <div className="flex items-center gap-4 mb-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-dark-gray">
-                            <input
-                                type="checkbox"
-                                checked={filterFavorita}
-                                onChange={(e) => setFilterFavorita(e.target.checked)}
-                                className="w-4 h-4 text-accent-red rounded border-gray-300 focus:ring-accent-red"
-                            />
-                            Apenas Favoritas
-                        </label>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tema / Título</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por tema..."
-                                value={filterTitulo}
-                                onChange={(e) => setFilterTitulo(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Autor (Nick)</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por nick..."
-                                value={filterNick}
-                                onChange={(e) => setFilterNick(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Série</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por série..."
-                                value={filterSerie}
-                                onChange={(e) => setFilterSerie(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    {loadingLista ? (
-                        <div className="divide-y divide-gray-100 animate-pulse">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="w-full flex items-center justify-between p-6">
-                                    <div className="flex-1 pr-4">
-                                        <div className="flex gap-2 mb-3">
-                                            <div className="h-5 w-24 bg-gray-100 rounded"></div>
-                                            <div className="h-5 w-20 bg-gray-100 rounded"></div>
-                                        </div>
-                                        <div className="h-6 w-3/4 bg-gray-100 rounded mb-4"></div>
-                                        <div className="flex gap-3">
-                                            <div className="h-5 w-32 bg-gray-100 rounded"></div>
-                                            <div className="h-5 w-40 bg-gray-100 rounded"></div>
-                                        </div>
-                                    </div>
-                                    <div className="h-6 w-6 bg-gray-100 rounded-full"></div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : redacoesFiltradas.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 text-center animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-gray-50 rounded-full flex flex-col items-center justify-center mb-6 border border-gray-100 shadow-sm">
-                                <Inbox className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
-                            </div>
-                            <h3 className="text-xl font-bold text-dark-gray mb-2">Fila Vazia</h3>
-                            <p className="text-gray-500 max-w-sm">Nenhuma redação foi encontrada com as configurações atuais. Tente remover os filtros ou aguarde novas submissões.</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-gray-100">
-                            {redacoesFiltradas.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        if (item.answer_id) {
-                                            router.push(`/dashboard/revisao/${item.answer_id}`);
-                                        } else {
-                                            handleSelectRedacao(item.id, item.revisao_id);
-                                        }
-                                    }}
-                                    className="w-full flex items-center justify-between p-6 hover:bg-gray-50 hover:pl-8 transition-all text-left group"
-                                >
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <div className="flex items-center flex-wrap gap-2 mb-3">
-                                            {/* Badge do Modelo da Tarefa/Proposta */}
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100" title="Modelo da Proposta/Tarefa">
-                                                <ClipboardList size={12} />
-                                                {item.model_id || 'Modelo Não Informado'}
-                                            </span>
-
-                                            {item.status === 'concluida' || item.status === 'corrigida' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-100">
-                                                    <Check size={12} />
-                                                    Concluída
-                                                </span>
-                                            ) : item.status === 'rascunho' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-100">
-                                                    <Clock size={12} />
-                                                    Rascunho
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-100">
-                                                    <Clock size={12} />
-                                                    Pendente
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <h3 className="text-lg font-bold text-dark-gray truncate group-hover:text-accent-red transition-colors mb-2">
-                                            {item.titulo_modelo || item.titulo}
-                                            {item.favorita && (
-                                                <Star size={16} className="inline-block ml-2 text-yellow-400 fill-yellow-400" />
-                                            )}
-                                        </h3>
-
-                                        <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">
-                                            <span className="flex items-center gap-1.5 text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded">
-                                                <UserIcon size={14} className="text-gray-400" />
-                                                {item.nick}
-                                            </span>
-                                            <span className="text-gray-300">•</span>
-                                            <span className="flex items-center gap-1.5 text-gray-600">
-                                                <GraduationCap size={14} className="text-gray-400" />
-                                                {item.nm_tipo_ensino && `${item.nm_tipo_ensino} - `}{item.nr_serie}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="text-gray-300 group-hover:text-accent-red transition-colors transform group-hover:translate-x-1 duration-300" />
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                <h2 className="text-2xl font-bold text-dark-gray mb-2">Redação em uso</h2>
+                <p className="text-gray-500 max-w-sm leading-relaxed mb-8">
+                    Outro corretor está revisando esta redação no momento. Por favor, escolha outra ou aguarde o lock expirar (30 minutos).
+                </p>
+                <button
+                    onClick={() => { setLockBlocked(false); setView('list'); }}
+                    className="flex items-center gap-2 px-6 py-3 bg-dark-gray text-white rounded-xl hover:bg-black transition-all font-semibold"
+                >
+                    <ArrowLeft size={16} /> Voltar para a Fila
+                </button>
             </div>
         );
     }
 
+
+    // ── Render: Loading skeleton ────────────────────────────
     if (loadingRedacao) {
         return (
             <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden animate-pulse">
-                {/* Fake header */}
                 <div className="bg-white border-b border-gray-100 flex items-center justify-between px-8 py-5 shadow-sm z-10">
                     <div className="flex flex-col gap-3">
                         <div className="h-7 w-64 bg-gray-100 rounded"></div>
@@ -856,55 +543,23 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         <div className="h-10 w-32 bg-gray-100 rounded-xl"></div>
                     </div>
                 </div>
-
                 <div className="flex flex-1 overflow-hidden">
-                    {/* Fake left column - essay text */}
                     <div className="w-1/2 border-r border-gray-100 p-8 lg:px-12 bg-[#fdfcf8]">
-                        <div className="w-full flex justify-end mb-8">
-                            <div className="h-8 w-32 bg-gray-100 rounded-full border border-gray-200"></div>
-                        </div>
+                        <div className="w-full flex justify-end mb-8"><div className="h-8 w-32 bg-gray-100 rounded-full border border-gray-200"></div></div>
                         <div className="space-y-5 max-w-[70ch] mx-auto opacity-60">
-                            {[1, 2, 3, 4, 5, 6, 7].map(line => (
-                                <div key={line} className={`h-6 bg-gray-200 rounded-sm w-${[
-                                    'full', '11/12', 'full', '4/5', 'full', '10/12', '9/12'
-                                ][line - 1]}`}></div>
-                            ))}
-                            <div className="h-6 bg-transparent w-full"></div> {/* break */}
-                            {[8, 9, 10, 11, 12].map(line => (
-                                <div key={line} className={`h-6 bg-gray-200 rounded-sm w-${[
-                                    'full', '10/12', 'full', '11/12', '3/4'
-                                ][line - 8]}`}></div>
-                            ))}
+                            {[1, 2, 3, 4, 5, 6, 7].map(line => (<div key={line} className="h-6 bg-gray-200 rounded-sm w-full"></div>))}
                         </div>
                     </div>
-
-                    {/* Fake right column - corrections */}
                     <div className="w-1/2 p-8 lg:px-12 bg-gray-50/50">
-                        {/* Fake Criterios bar */}
                         <div className="flex bg-gray-100 p-1.5 rounded-lg space-x-2 mb-10 h-12 w-full"></div>
-
-                        <div className="h-8 w-56 bg-gray-100 rounded mb-3"></div>
-                        <div className="h-4 w-72 bg-gray-100 rounded mb-10"></div>
-
-                        {/* Fake Devolutiva IA */}
-                        <div className="h-4 w-60 bg-gray-100 rounded mb-5"></div>
-                        <div className="h-48 bg-gray-100 rounded-2xl w-full mb-12 border border-gray-200"></div>
-
-                        {/* Fake select inputs */}
-                        <div className="space-y-8">
-                            {[1, 2, 3].map(i => (
-                                <div key={i}>
-                                    <div className="h-4 w-48 bg-gray-100 rounded mb-3"></div>
-                                    <div className="h-14 bg-gray-100 rounded-xl w-full border border-gray-200"></div>
-                                </div>
-                            ))}
-                        </div>
+                        <div className="space-y-8">{[1, 2, 3].map(i => (<div key={i}><div className="h-4 w-48 bg-gray-100 rounded mb-3"></div><div className="h-14 bg-gray-100 rounded-xl w-full border border-gray-200"></div></div>))}</div>
                     </div>
                 </div>
             </div>
         );
     }
 
+    // ── Render: Error ───────────────────────────────────────
     if (!redacao) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)] bg-white text-center px-4">
@@ -912,546 +567,165 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 <h2 className="text-2xl font-bold text-dark-gray mb-2">Erro ao carregar</h2>
                 <p className="text-gray-500">Não foi possível encontrar a redação selecionada.</p>
                 <button
-                    onClick={() => {
-                        if (initialAnswerId) {
-                            window.location.href = '/dashboard/revisao';
-                        } else {
-                            setView('list');
-                        }
-                    }}
+                    onClick={() => { if (initialAnswerId) { window.location.href = '/dashboard/revisao'; } else { setView('list'); } }}
                     className="mt-6 flex items-center gap-2 px-6 py-2 bg-gray-100 text-dark-gray rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
-                    <ArrowLeft size={16} />
-                    Voltar para lista
+                    <ArrowLeft size={16} /> Voltar para lista
                 </button>
             </div>
         );
     }
 
+    // ── Render: Mesa de Correção ────────────────────────────
+    const activeCriterioObj = criterios.find(c => c.id === activeCriterio);
+    const activeSkill = redacao.evaluated_skills?.[activeCriterio - 1];
+
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] bg-white">
-            {/* Top Toolbar */}
-            <div className="h-14 border-b border-gray-100 flex items-center px-8 bg-gray-50/50 shrink-0">
-                <button
-                    onClick={() => {
-                        if (initialAnswerId) {
-                            window.location.href = '/dashboard/revisao';
-                        } else {
-                            setView('list');
-                        }
-                    }}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-dark-gray transition-colors"
-                >
-                    <ArrowLeft size={16} />
-                    Voltar para Fila
-                </button>
-            </div>
-
-            {/* Cabeçalho Condensado (Top Bar) */}
-            <div className="border-b border-gray-100 bg-white shrink-0 flex flex-col">
-                {/* Linha 1: Metadados da Redação e Ferramentas */}
-                <div className="flex items-center justify-between px-8 py-3 border-b border-gray-50 flex-wrap gap-4">
-                    <div className="flex items-center gap-5">
-                        <div className="flex items-center gap-3 text-gray-400">
-                            <UserIcon size={14} />
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-dark-gray">{redacao.nick}</span>
-                            <span className="text-gray-200">|</span>
-                            <span className="text-[11px] font-medium">{redacao.extra_fields?.redacao_ano_serie}</span>
-                        </div>
-                        <div className="w-px h-4 bg-gray-200" />
-                        <h1 className="text-sm font-bold text-dark-gray truncate max-w-sm" title={redacao.title || 'Sem Título'}>
-                            {redacao.title || 'Sem Título'}
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider pl-2">Filtrar Grifos:</span>
-                            <select
-                                className="bg-transparent text-[11px] font-bold text-gray-600 outline-none cursor-pointer pr-1"
-                                value={filterHighlightCriterio}
-                                onChange={(e) => setFilterHighlightCriterio(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                            >
-                                <option value="all">TODOS</option>
-                                {CRITERIOS.map(c => <option key={`fh-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                            </select>
-                        </div>
-                        <button
-                            onClick={() => {
-                                setToolbarMode(prev => prev === 'floating' ? 'fixed' : 'floating');
-                                if (!window.getSelection()?.toString() && highlightPopup?.visible) {
-                                    setHighlightPopup(null);
-                                }
-                            }}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors uppercase shadow-sm whitespace-nowrap"
-                        >
-                            {toolbarMode === 'floating' ? (
-                                <><Pin size={12} /> Fixar Barra Texto</>
-                            ) : (
-                                <><PinOff size={12} /> Barra Flutuante</>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Linha 2: Avaliação e Abas */}
-                <div className="flex items-center justify-between px-8 py-2.5 bg-gray-50/30">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-xs font-bold text-dark-gray flex items-center gap-2 uppercase tracking-wider">
-                            <BookOpen className="text-accent-red" size={14} />
-                            Avaliação Técnica
-                        </h2>
-                        <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, favorita: !formData.favorita })}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-colors ${formData.favorita
-                                ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                                : 'bg-white text-gray-400 border border-gray-200 hover:bg-yellow-50 hover:text-yellow-600'
-                                }`}
-                        >
-                            <Star size={10} className={formData.favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
-                            {formData.favorita ? 'Favorita' : 'Favoritar'}
-                        </button>
-                    </div>
-
-                    <div className="flex bg-gray-100/80 p-0.5 rounded-lg space-x-1 border border-gray-200/50">
-                        {CRITERIOS.map((c) => (
-                            <button
-                                key={`tab-${c.id}`}
-                                type="button"
-                                onClick={() => setActiveCriterio(c.id)}
-                                className={cn(
-                                    "px-4 py-1.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
-                                    activeCriterio === c.id
-                                        ? "bg-white text-dark-gray shadow-sm border border-gray-200/50 ring-2 ring-inset ring-gray-100"
-                                        : "text-gray-500 hover:text-dark-gray hover:bg-white/50",
-                                    getCriterioStatus(c.id) === 'complete' && activeCriterio !== c.id && "text-green-600 bg-green-50/50",
-                                    getCriterioStatus(c.id) === 'complete' && activeCriterio === c.id && "ring-green-200 text-green-700",
-                                    getCriterioStatus(c.id) === 'partial' && activeCriterio !== c.id && "text-yellow-600 bg-yellow-50/50",
-                                    getCriterioStatus(c.id) === 'partial' && activeCriterio === c.id && "ring-yellow-200 text-yellow-700"
-                                )}
-                            >
-                                <div className="flex items-center justify-center gap-1.5">
-                                    Competência {c.id}
-                                    {getCriterioStatus(c.id) === 'complete' && (
-                                        <CheckCircle2 size={12} className="text-green-500 shrink-0" />
-                                    )}
-                                    {getCriterioStatus(c.id) === 'partial' && (
-                                        <AlertCircle size={12} className="text-yellow-500 shrink-0" />
-                                    )}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+        <div className="flex flex-col h-[calc(100vh-64px)] bg-[#fdfaf2] overflow-hidden">
+            <CorrectionHeader
+                redacao={redacao}
+                criterios={criterios}
+                activeCriterio={activeCriterio}
+                setActiveCriterio={setActiveCriterio}
+                getCriterioStatus={getCriterioStatus}
+                filterHighlightCriterio={filterHighlightCriterio}
+                setFilterHighlightCriterio={setFilterHighlightCriterio}
+                toolbarMode={toolbarMode}
+                setToolbarMode={setToolbarMode}
+                favorita={formData.favorita}
+                setFavorita={(fav) => setFormData({ ...formData, favorita: fav })}
+                hasSelection={!!(window.getSelection()?.toString())}
+                onResetPopup={() => setHighlightPopup(null)}
+                readMode={readMode}
+                setReadMode={setReadMode}
+                onExitMesa={handleExitMesa}
+                onSaveRevisao={handleSaveRevisao}
+                submitting={submitting}
+                isAllComplete={isAllComplete}
+            />
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Coluna da Esquerda: Leitura */}
-                <div className={cn(
-                    "w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:px-12 custom-scrollbar relative transition-colors duration-500",
-                    readMode ? "bg-[#fdfcf8]" : "bg-white"
-                )}>
-                    <div className="w-full flex justify-end mb-4">
-                        <button
-                            onClick={() => setReadMode(!readMode)}
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full transition-colors border",
-                                readMode
-                                    ? "bg-stone-200 text-stone-700 border-stone-300 hover:bg-stone-300"
-                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
-                            )}
-                        >
-                            <BookOpen size={12} />
-                            {readMode ? "Modo Normal" : "Modo Leitura"}
-                        </button>
-                    </div>
-
-                    <div className="w-full mx-auto max-w-[70ch]">
-                        {/* Barra Fixa (Estilo Word) */}
+                {/* Coluna da Esquerda: Texto */}
+                <div className="w-1/2 flex flex-col border-r border-gray-200/50 bg-[#fdfaf2] relative group/text transition-all duration-300">
+                    <div className="px-8 lg:px-12 py-8 overflow-y-auto custom-scrollbar flex-1">
                         {toolbarMode === 'fixed' && (
-                            <div className={cn(
-                                "mb-6 p-4 rounded-xl border transition-all duration-300",
-                                highlightPopup?.visible
-                                    ? "bg-white border-accent-red/30 shadow-[0_4px_20px_-5px_rgba(239,68,68,0.15)]"
-                                    : "bg-gray-50 border-gray-200 opacity-60 grayscale-[50%] pointer-events-none"
-                            )}>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Highlighter size={16} className={highlightPopup?.visible ? "text-accent-red" : "text-gray-400"} />
-                                    <span className="text-sm font-bold text-dark-gray">
-                                        {highlightPopup?.visible ? "Texto Selecionado: Adicionar Destaque" : "Selecione um texto para grifar..."}
-                                    </span>
-                                </div>
-                                <form onSubmit={handleAddHighlight} className="flex gap-3">
-                                    <select
-                                        required
-                                        value={highlightFormData.criterio_id}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
-                                        className="w-32 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    >
-                                        {CRITERIOS.map(c => <option key={`hp-f-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                    </select>
-                                    <select
-                                        required
-                                        value={highlightFormData.cor}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, cor: e.target.value })}
-                                        className="w-28 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    >
-                                        <option value="amarelo">Amarelo 🟨</option>
-                                        <option value="verde">Verde 🟩</option>
-                                        <option value="vermelho">Vermelho 🟥</option>
-                                    </select>
-                                    <input
-                                        type="text"
-                                        value={highlightFormData.observacao}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
-                                        placeholder="Observação rápida..."
-                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    />
-                                    <button type="submit" className="bg-dark-gray text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-black transition-colors flex items-center justify-center gap-2">
-                                        <Check size={14} /> Salvar
+                            <FixedToolbar
+                                visible={!!(window.getSelection()?.toString())}
+                                criterios={criterios}
+                                formData={highlightFormData}
+                                setFormData={setHighlightFormData}
+                                onSubmit={handleAddHighlight}
+                            />
+                        )}
+                        <div className="max-w-4xl mx-auto py-8 lg:pt-12 lg:pb-4 px-4 sm:px-8">
+                            <h2 className="text-2xl font-serif font-black text-dark-gray mb-6 text-center leading-tight tracking-tight">
+                                {redacao.title || 'Sem Título'}
+                            </h2>
+                            <div className="w-16 h-px bg-accent-red/20 mx-auto mb-8" />
+                            <div
+                                ref={textContainerRef}
+                                onMouseUp={handleTextSelection}
+                                className={cn(
+                                    'prose prose-slate max-w-none prose-p:leading-[1.7] prose-p:mb-5',
+                                    'text-dark-gray font-serif text-lg sm:text-xl selection:bg-accent-red/10',
+                                    readMode ? 'mx-auto' : 'w-full'
+                                )}
+                                style={{ whiteSpace: 'pre-wrap' }}
+                            >
+                                {renderTextWithHighlights(redacao.essay)}
+                            </div>
+                        </div>
+
+                        {!readMode && (
+                            <div className="mt-6 pt-6 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
+                                <div className="flex items-center justify-between bg-white/20 p-6 rounded-3xl border border-gray-200/50 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn('w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300', formData.suspeita_ia ? 'bg-red-100 text-red-600 shadow-inner' : 'bg-gray-100 text-gray-500')}>
+                                            <AlertCircle size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 className="font-bold text-dark-gray">Suspeita de uso de IA</h4>
+                                            <p className="text-xs text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
+                                        </div>
+                                    </div>
+                                    <button type="button"
+                                        onClick={() => setFormData({ ...formData, suspeita_ia: !formData.suspeita_ia })}
+                                        className={cn('relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ring-offset-2 focus:ring-2 focus:ring-red-500/20', formData.suspeita_ia ? 'bg-accent-red shadow-lg shadow-accent-red/20' : 'bg-gray-300')}>
+                                        <span className={cn('inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform', formData.suspeita_ia ? 'translate-x-6' : 'translate-x-1')} />
                                     </button>
-                                </form>
+                                </div>
+                                {formData.suspeita_ia && (
+                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-[0.15em] mb-3 pl-1">Justificativa da suspeita (Opcional)</label>
+                                        <textarea
+                                            value={formData.motivo_suspeita_ia}
+                                            onChange={(e) => setFormData({ ...formData, motivo_suspeita_ia: e.target.value })}
+                                            placeholder="Descreva aqui os padrões ou evidências que indicam o uso de IA..."
+                                            rows={4}
+                                            className="w-full bg-white/60 border border-gray-200/60 rounded-2xl px-6 py-5 text-base focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all resize-none shadow-sm"
+                                        />
+                                    </div>
+                                )}
                             </div>
                         )}
-
-                        <div
-                            ref={textContainerRef}
-                            onMouseUp={handleTextSelection}
-                            className={cn(
-                                "font-serif whitespace-pre-wrap outline-none selection:bg-gray-200/60 transition-all duration-300",
-                                readMode
-                                    ? "text-xl text-stone-800 leading-[1.8]"
-                                    : "text-lg text-gray-800 leading-relaxed"
-                            )}
-                        >
-                            {renderTextWithHighlights(redacao.essay || '', false)}
-                        </div>
                     </div>
 
-                    {/* Pop-up do Marca-Texto Flutuante */}
-                    {highlightPopup?.visible && toolbarMode === 'floating' && (
-                        <div
-                            className={cn(
-                                "fixed z-50 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 p-5 w-80 animate-in fade-in zoom-in-95 outline-none transition-shadow",
-                                isDragging ? "shadow-2xl opacity-90 duration-0" : "duration-200"
-                            )}
-                            style={{
-                                top: Math.max(20, highlightPopup.y),
-                                left: Math.max(20, Math.min(window.innerWidth - 340, highlightPopup.x))
-                            }}
-                            onMouseUp={(e) => { e.stopPropagation(); setIsDragging(false); }}
-                        >
-                            <div
-                                className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 cursor-move group"
-                                onMouseDown={handleDragStart}
-                            >
-                                <Move size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-                                <Highlighter className="text-accent-red" size={16} />
-                                <h4 className="text-sm font-bold text-dark-gray">Criar Destaque Visual</h4>
-                                <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => { setHighlightPopup(null); setIsDragging(false); }} className="ml-auto text-gray-400 hover:text-gray-600">
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleAddHighlight} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    {highlightPopup.target === 'texto' && (
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Critério Ref.</label>
-                                            <select
-                                                required
-                                                value={highlightFormData.criterio_id}
-                                                onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
-                                            >
-                                                {CRITERIOS.map(c => <option key={`hp-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                            </select>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cor</label>
-                                        <select
-                                            required
-                                            value={highlightFormData.cor}
-                                            onChange={(e) => setHighlightFormData({ ...highlightFormData, cor: e.target.value })}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
-                                        >
-                                            <option value="amarelo">Amarelo 🟨</option>
-                                            <option value="verde">Verde 🟩</option>
-                                            <option value="vermelho">Vermelho 🟥</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Observação sobre o trecho grifado</label>
-                                    <textarea
-                                        rows={2}
-                                        value={highlightFormData.observacao}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
-                                        placeholder="Ex: Trecho confuso, excelente uso de conjunção..."
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none resize-none"
-                                    />
-                                </div>
-
-                                <button type="submit" className="w-full bg-dark-gray text-white text-xs font-bold py-2.5 rounded-lg hover:bg-black transition-colors flex items-center justify-center gap-2">
-                                    <Check size={14} /> Salvar Destaque
-                                </button>
-                            </form>
-                        </div>
-                    )}
+                    <FloatingToolbar
+                        visible={!!(highlightPopup?.visible && toolbarMode === 'floating')}
+                        x={highlightPopup?.x || 0}
+                        y={highlightPopup?.y || 0}
+                        target={highlightPopup?.target || 'texto'}
+                        targetId={highlightPopup?.targetId}
+                        criterios={criterios}
+                        formData={highlightFormData}
+                        setFormData={setHighlightFormData}
+                        onSubmit={handleAddHighlight}
+                        onClose={() => setHighlightPopup(null)}
+                        isDragging={isDragging}
+                        onDragStart={handleDragStart}
+                    />
                 </div>
 
                 {/* Coluna da Direita: Formulário */}
-                <div className="w-1/2 overflow-y-auto bg-gray-50/50 custom-scrollbar relative">
+                <div className="w-1/2 overflow-y-auto bg-[#fdfaf2] custom-scrollbar relative border-l border-gray-200/50">
                     <div className="w-full">
                         <form onSubmit={(e) => handleSaveRevisao(e, false)} className="pb-8">
-                            {/* Conteúdo da Competência Ativa */}
-                            {(() => {
-                                const c = CRITERIOS.find(crit => crit.id === activeCriterio);
-                                if (!c) return null;
-
-                                const skill = redacao.evaluated_skills?.[c.id - 1];
-                                const notasIA = skill?.score ?? 0;
-                                const devolutivaIA = skill?.comment ?? '';
-                                const criterionHighlights = highlights.filter(h => h.criterio_id === c.id && (!h.target || h.target === 'texto'));
-
-                                return (
-                                    <div key={`content-${c.id}`} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200 flex items-start justify-between px-8 lg:px-12 py-6 shadow-sm">
-                                            <div>
-                                                <h3 className="font-bold text-dark-gray text-2xl mb-1">
-                                                    {c.name}
-                                                </h3>
-                                                <p className="text-[12px] font-bold text-gray-500 uppercase tracking-widest">{c.desc}</p>
-                                            </div>
-                                            <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10">
-                                                <span className="text-sm font-bold text-accent-red">Nota IA: {notasIA}</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="px-8 lg:px-12 mt-8">
-                                            {/* Bloco da IA */}
-                                            <div className="mb-10">
-                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                    <BookOpen size={16} />
-                                                    Devolutiva da Inteligência Artificial
-                                                </h4>
-                                                <div
-                                                    className="text-[17px] font-serif text-gray-800 leading-[1.8] whitespace-pre-wrap selection:bg-purple-500/20 bg-gradient-to-b from-purple-50/40 to-white p-8 rounded-2xl border border-purple-100/60 shadow-sm"
-                                                    data-devolutiva="true"
-                                                    data-criterio-id={c.id}
-                                                    onMouseUp={handleTextSelection}
-                                                >
-                                                    {renderTextWithHighlights(devolutivaIA, true, c.id)}
-                                                </div>
-
-                                                {/* Grifos atrelados a este critério */}
-                                                {criterionHighlights.length > 0 && (
-                                                    <div className="mt-6 pt-6 border-t border-gray-100">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
-                                                            Trechos Grifados na Redação ({criterionHighlights.length})
-                                                        </p>
-                                                        <div className="flex flex-col gap-3">
-                                                            {criterionHighlights.map((h, idx) => (
-                                                                <div key={`hc-${idx}`} className="bg-white border border-gray-100 rounded-xl p-4 text-sm flex gap-4 shadow-sm relative group hover:border-gray-200 transition-colors">
-                                                                    <div className={cn("w-1.5 rounded-full shrink-0 shadow-sm",
-                                                                        h.cor === 'verde' ? 'bg-green-400' :
-                                                                            h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
-                                                                    )}></div>
-                                                                    <div className="pr-6">
-                                                                        <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
-                                                                        {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
-                                                                    </div>
-                                                                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)}
-                                                                                    className="text-gray-300 hover:text-blue-500 bg-white p-1.5 rounded-md hover:bg-blue-50 shadow-sm border border-gray-100"
-                                                                                    aria-label="Editar Destaque"
-                                                                                >
-                                                                                    <Highlighter size={16} />
-                                                                                </button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent side="top">Editar Destaque</TooltipContent>
-                                                                        </Tooltip>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))}
-                                                                                    className="text-gray-300 hover:text-red-500 bg-white p-1.5 rounded-md hover:bg-red-50 shadow-sm border border-gray-100"
-                                                                                    aria-label="Remover Destaque"
-                                                                                >
-                                                                                    <X size={16} />
-                                                                                </button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent side="top">Remover Destaque</TooltipContent>
-                                                                        </Tooltip>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* Campos de Revisão Manual */}
-                                            <div className="space-y-6">
-                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                    <UserIcon size={16} />
-                                                    Sua Avaliação
-                                                </h4>
-
-                                                <div className="flex flex-col gap-6">
-                                                    {/* Tema 1 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação de pontos positivos</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_1`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
-                                                    </div>
-
-                                                    {/* Tema 2 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação do problema que levou à perda de nota (quando há perda)</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_2`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
-                                                    </div>
-
-                                                    {/* Tema 3 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sugestão de melhoria ao estudante (quando necessária).</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_3`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
-                                                    </div>
-                                                </div>
-
-                                                {/* Observação */}
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 mt-6 text-left">Observações adicionais (opcional)</label>
-                                                    <textarea
-                                                        rows={3}
-                                                        value={(formData as any)[`criterio_${c.id}_observacao`]}
-                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
-                                                        placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all resize-none text-gray-700"
-                                                    />
-                                                </div>
-
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-
-                            <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm mt-8 mx-8 lg:mx-12">
-                                <label className="block text-lg font-bold text-dark-gray mb-1">Comentário Final do Corretor</label>
-                                <p className="text-sm font-medium text-gray-400 mb-4">Revisão geral e fechamento (opcional).</p>
-                                <textarea
-                                    rows={4}
-                                    value={formData.comentario_geral}
-                                    onChange={(e) => setFormData({ ...formData, comentario_geral: e.target.value })}
-                                    placeholder="Escreva aqui suas observações gerais sobre a avaliação da IA..."
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all resize-none shadow-sm"
+                            {activeCriterioObj && (
+                                <CriterioPanel
+                                    criterio={activeCriterioObj}
+                                    formData={formData as any}
+                                    setFormData={setFormData as any}
+                                    openTema={openTema}
+                                    setOpenTema={setOpenTema}
+                                    readMode={readMode}
+                                    onOpenInfo={() => setIsInfoModalOpen(true)}
+                                    notaIA={activeSkill?.score ?? 0}
+                                    devolutivaIA={activeSkill?.comment ?? ''}
+                                    renderTextWithHighlights={renderTextWithHighlights}
+                                    handleTextSelection={handleTextSelection}
                                 />
-                            </div>
-
-                            <div className="mx-8 lg:mx-12 mt-6">
-                                <div className="p-4 bg-white border outline-none border-gray-100 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                                    <div className="flex-1 text-xs text-gray-500 font-medium">
-                                        {isAllComplete ? (
-                                            <span className="text-green-600 flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-md w-fit">
-                                                <CheckCircle2 size={14} /> Pronto para finalizar
-                                            </span>
-                                        ) : (
-                                            <span className="text-yellow-600 flex items-center gap-1.5 bg-yellow-50 px-3 py-1.5 rounded-md w-fit">
-                                                <AlertCircle size={14} /> Preencha todas as competências para finalizar
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex w-full md:w-auto gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => handleSaveRevisao(e, true)}
-                                            disabled={submitting}
-                                            className="w-full md:w-auto px-6 py-3 rounded-xl font-bold bg-white text-dark-gray border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-gray-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Save size={18} />
-                                            <span>Salvar Rascunho</span>
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            disabled={submitting || !isAllComplete}
-                                            className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white bg-dark-gray hover:bg-black focus:ring-4 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 group"
-                                        >
-                                            {submitting ? (
-                                                <Loader2 className="animate-spin" size={20} />
-                                            ) : (
-                                                <>
-                                                    <span>Finalizar Revisão</span>
-                                                    <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            )}
                         </form>
                     </div>
                 </div>
             </div>
+
+            {/* Modal: Info do Critério */}
+            {isInfoModalOpen && activeCriterioObj && (
+                <CriterioInfoModal
+                    criterio={activeCriterioObj}
+                    onClose={() => setIsInfoModalOpen(false)}
+                />
+            )}
+
+            {/* Modal: Confirmação de saída */}
+            {showExitConfirm && (
+                <ExitConfirmModal
+                    onSaveAndExit={(e) => { handleSaveRevisao(e, true); setShowExitConfirm(false); }}
+                    onExitWithoutSave={() => handleExitMesa(true)}
+                    onCancel={() => setShowExitConfirm(false)}
+                />
+            )}
         </div>
     );
 }
