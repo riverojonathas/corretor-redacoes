@@ -192,3 +192,105 @@ WHERE schemaname = 'public'
   AND indexname LIKE 'idx_%'
 ORDER BY tablename, indexname;
 ```
+
+---
+
+## 6. Views de Performance
+*Criadas na Fase B do Plano de Performance — Março 2026*
+
+> [!IMPORTANT]
+> As views abaixo **substituem o full-scan** de todas as redações que era feito no Dashboard. Execute o script sempre que recriar o banco. Sem elas, o Dashboard busca todos os dados brutos no cliente.
+
+### `dashboard_stats`
+Retorna os 4 agregados globais do Dashboard em uma única linha. Elimina a busca de todas as redações.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `total_redacoes` | `bigint` | Total de redações na base |
+| `total_modelos` | `bigint` | Temas distintos em `extra_fields->>'redacao_tema'` |
+| `total_revisoes` | `bigint` | Total de revisões feitas por corretores |
+| `nota_media_geral` | `numeric` | Média da soma das 5 competências de cada redação |
+
+### `dashboard_stats_por_serie`
+Agrupa redações por série escolar e calcula a nota média de cada grupo.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `serie` | `text` | Série (de `extra_fields->>'redacao_ano_serie'`) ou `'Outros'` |
+| `total` | `bigint` | Quantidade de redações na série |
+| `nota_media` | `numeric` | Média da nota total nessa série |
+
+### Script SQL (Fase B)
+
+```sql
+-- ============================================================
+-- FASE B: Views de Performance para o Dashboard
+-- Executar no SQL Editor do Supabase
+-- ============================================================
+
+-- View 1: Estatísticas Globais
+CREATE OR REPLACE VIEW public.dashboard_stats AS
+SELECT
+    COUNT(*) AS total_redacoes,
+    COUNT(DISTINCT extra_fields->>'redacao_tema') AS total_modelos,
+    (SELECT COUNT(*) FROM public.revisoes) AS total_revisoes,
+    ROUND(
+        AVG(
+            (
+                SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
+                FROM jsonb_array_elements(
+                    CASE jsonb_typeof(r.evaluated_skills)
+                        WHEN 'array' THEN r.evaluated_skills
+                        ELSE '[]'::jsonb
+                    END
+                ) AS skill
+            )
+        )
+    ) AS nota_media_geral
+FROM public.redacoes r
+WHERE evaluated_skills IS NOT NULL
+  AND jsonb_typeof(evaluated_skills) = 'array';
+
+-- View 2: Médias por Série
+CREATE OR REPLACE VIEW public.dashboard_stats_por_serie AS
+SELECT
+    COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros') AS serie,
+    COUNT(*) AS total,
+    ROUND(
+        AVG(
+            (
+                SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
+                FROM jsonb_array_elements(
+                    CASE jsonb_typeof(r.evaluated_skills)
+                        WHEN 'array' THEN r.evaluated_skills
+                        ELSE '[]'::jsonb
+                    END
+                ) AS skill
+            )
+        )
+    ) AS nota_media
+FROM public.redacoes r
+WHERE evaluated_skills IS NOT NULL
+  AND jsonb_typeof(evaluated_skills) = 'array'
+  AND (
+        (
+            SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
+            FROM jsonb_array_elements(
+                CASE jsonb_typeof(r.evaluated_skills)
+                    WHEN 'array' THEN r.evaluated_skills
+                    ELSE '[]'::jsonb
+                END
+            ) AS skill
+        ) > 0
+        OR (r.extra_fields->>'redacao_zerada')::boolean = false
+  )
+GROUP BY COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros')
+ORDER BY nota_media DESC;
+```
+
+### Verificar se as views foram criadas
+
+```sql
+SELECT * FROM public.dashboard_stats;
+SELECT * FROM public.dashboard_stats_por_serie LIMIT 10;
+```

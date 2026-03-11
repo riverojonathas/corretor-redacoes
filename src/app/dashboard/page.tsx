@@ -25,66 +25,36 @@ export default function DashboardPage() {
         async function fetchMetrics() {
             setLoadingStats(true);
             try {
-                // 1. Busca todas as redacoes para calcular totais, modelos, e médias
-                const { data: redacoes } = await supabase
-                    .from('redacoes')
-                    .select('id, title, extra_fields, evaluated_skills');
+                // Fase B: usa as Views SQL para evitar full-scan
+                const [statsResult, serieResult] = await Promise.all([
+                    supabase
+                        .from('dashboard_stats')
+                        .select('total_redacoes, total_modelos, total_revisoes, nota_media_geral')
+                        .single(),
+                    supabase
+                        .from('dashboard_stats_por_serie')
+                        .select('serie, nota_media')
+                ]);
 
-                // 2. Busca todas as revisões feitas
-                const { count: revisoesCount } = await supabase
-                    .from('revisoes')
-                    .select('id', { count: 'exact', head: true });
+                const statsData = statsResult.data;
+                const serieData = serieResult.data ?? [];
 
-                if (!redacoes) {
+                if (!statsData) {
                     setLoadingStats(false);
                     return;
                 }
 
-                // Processamento de dados
-                const totalRedacoes = redacoes.length;
-                const totalModelos = new Set(
-                    redacoes.map((r: any) => r.extra_fields?.redacao_tema?.trim())
-                           .filter(Boolean)
-                ).size;
-                const totalRevisoes = revisoesCount || 0;
-
-                let sumGeral = 0;
-                let countGeral = 0;
-
-                const seriesData: Record<string, { sum: number, count: number }> = {};
-
-                redacoes.forEach((r: any) => {
-                    const skills = r.evaluated_skills || [];
-                    // Soma as 5 competências (C1-C5) se existirem
-                    const notaTotal = skills.reduce((sum: number, s: any) => sum + (Number(s.score) || 0), 0);
-
-                    // Consideramos para a média apenas se a redação tiver alguma avaliação válida ou não estiver zerada por erro
-                    if (notaTotal > 0 || r.extra_fields?.redacao_zerada === false) {
-                        sumGeral += notaTotal;
-                        countGeral++;
-
-                        const serie = r.extra_fields?.redacao_ano_serie?.trim() || 'Outros';
-                        if (!seriesData[serie]) {
-                            seriesData[serie] = { sum: 0, count: 0 };
-                        }
-                        seriesData[serie].sum += notaTotal;
-                        seriesData[serie].count++;
-                    }
-                });
-
-                const notaMediaGeral = countGeral > 0 ? Math.round(sumGeral / countGeral) : 0;
-
                 const mediasPorSerie: Record<string, number> = {};
-                Object.keys(seriesData).forEach(serie => {
-                    mediasPorSerie[serie] = Math.round(seriesData[serie].sum / seriesData[serie].count);
+                serieData.forEach((row: any) => {
+                    if (row.serie) mediasPorSerie[row.serie] = Number(row.nota_media) || 0;
                 });
 
                 setStats({
-                    totalRedacoes,
-                    totalModelos,
-                    totalRevisoes,
-                    notaMediaGeral,
-                    mediasPorSerie
+                    totalRedacoes: Number(statsData.total_redacoes) || 0,
+                    totalModelos: Number(statsData.total_modelos) || 0,
+                    totalRevisoes: Number(statsData.total_revisoes) || 0,
+                    notaMediaGeral: Number(statsData.nota_media_geral) || 0,
+                    mediasPorSerie,
                 });
             } catch (err) {
                 console.error("Erro ao buscar estatísticas", err);
