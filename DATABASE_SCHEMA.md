@@ -272,18 +272,6 @@ SELECT
 FROM public.redacoes r
 WHERE evaluated_skills IS NOT NULL
   AND jsonb_typeof(evaluated_skills) = 'array'
-  AND (
-        (
-            SELECT COALESCE(SUM((skill->>'score')::numeric), 0)
-            FROM jsonb_array_elements(
-                CASE jsonb_typeof(r.evaluated_skills)
-                    WHEN 'array' THEN r.evaluated_skills
-                    ELSE '[]'::jsonb
-                END
-            ) AS skill
-        ) > 0
-        OR (r.extra_fields->>'redacao_zerada')::boolean = false
-  )
 GROUP BY COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros')
 ORDER BY nota_media DESC;
 ```
