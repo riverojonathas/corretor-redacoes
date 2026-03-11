@@ -157,6 +157,15 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                     'Indicadores de Status em tempo real para cada bloco.',
                 ],
             },
+            {
+                section: '🎫 Central de Ajuda — Acompanhamento de Chamados',
+                items: [
+                    'Chamados Registrados: ao enviar uma sugestão ou reporte de erro, o chamado é registrado e acompanhável.',
+                    'Modal de Sucesso: após o envio, o modal exibe confirmação e link direto para Ver Meus Chamados.',
+                    'Aba "Meus Chamados" em Configurações: listagem de todos os chamados do usuário com status colorido (Aguardando análise, Em análise, Resolvido).',
+                    'Changelog Completo por Release: cada versão na Central do Corretor agora exibe o histórico detalhado em modal fullscreen.',
+                ],
+            },
         ],
     },
     {
