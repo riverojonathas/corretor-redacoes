@@ -970,6 +970,53 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         >
                             {renderTextWithHighlights(redacao.essay)}
                         </div>
+
+                        {!readMode && (
+                            <div className="mt-12 pt-12 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
+                                <div className="flex items-center justify-between bg-white/40 p-5 rounded-3xl border border-gray-200/50 shadow-sm">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
+                                            formData.suspeita_ia ? "bg-red-100 text-red-600 shadow-inner" : "bg-gray-100 text-gray-400"
+                                        )}>
+                                            <AlertCircle size={24} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-base font-bold text-dark-gray">Suspeita de uso de IA</h4>
+                                            <p className="text-sm text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, suspeita_ia: !formData.suspeita_ia })}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ring-offset-2 focus:ring-2 focus:ring-red-500/20",
+                                            formData.suspeita_ia ? "bg-red-500" : "bg-gray-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-5 w-5 transform rounded-full bg-white shadow-md transition-transform",
+                                                formData.suspeita_ia ? "translate-x-6" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+
+                                {formData.suspeita_ia && (
+                                    <div className="animate-in fade-in slide-in-from-top-4 duration-500">
+                                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-[0.15em] mb-3 pl-1">Justificativa da suspeita (Opcional)</label>
+                                        <textarea
+                                            value={formData.motivo_suspeita_ia}
+                                            onChange={(e) => setFormData({ ...formData, motivo_suspeita_ia: e.target.value })}
+                                            placeholder="Descreva aqui os padrões ou evidências que indicam o uso de IA..."
+                                            rows={4}
+                                            className="w-full bg-white/60 border border-gray-200/60 rounded-2xl px-6 py-5 text-base focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all resize-none shadow-sm"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
 
                     <FloatingToolbar
@@ -1147,53 +1194,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                 );
                             })()}
                         </form>
-
-                        {!readMode && (
-                            <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col gap-6">
-                                <div className="flex items-center justify-between bg-white/50 p-4 rounded-2xl border border-gray-200/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-                                            formData.suspeita_ia ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-400"
-                                        )}>
-                                            <AlertCircle size={20} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-bold text-dark-gray">Suspeita de uso de IA</h4>
-                                            <p className="text-xs text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, suspeita_ia: !formData.suspeita_ia })}
-                                        className={cn(
-                                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
-                                            formData.suspeita_ia ? "bg-red-500" : "bg-gray-200"
-                                        )}
-                                    >
-                                        <span
-                                            className={cn(
-                                                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-                                                formData.suspeita_ia ? "translate-x-6" : "translate-x-1"
-                                            )}
-                                        />
-                                    </button>
-                                </div>
-
-                                {formData.suspeita_ia && (
-                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 pl-1">Por que você suspeita de IA? (Opcional)</label>
-                                        <textarea
-                                            value={formData.motivo_suspeita_ia}
-                                            onChange={(e) => setFormData({ ...formData, motivo_suspeita_ia: e.target.value })}
-                                            placeholder="Ex: Padrões repetitivos, vocabulário genérico, falta de conexão lógica..."
-                                            rows={3}
-                                            className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all resize-none"
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
