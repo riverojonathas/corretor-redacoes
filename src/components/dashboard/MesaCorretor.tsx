@@ -26,57 +26,77 @@ import {
     ClipboardList,
     GraduationCap,
     Save,
-    Inbox
+    Inbox,
+    HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Redacao, RedacaoListItem, Highlight, Criterio } from '@/types/dashboard';
+import { RedacaoList } from './RedacaoList';
+import { CorrectionHeader } from './CorrectionHeader';
+import { FloatingToolbar, FixedToolbar } from './HighlightTools';
 
-interface Redacao {
-    id: string;
-    internal_id: string;
-    nick: string;
-    title: string;
-    essay: string;
-    genre: string;
-    statement: string;
-    support_text: string;
-    evaluated_skills?: { score: number; comment: string; statement?: string }[];
-    assessed_skills?: { statement: string; description: string }[];
-    extra_fields?: { redacao_tema?: string; redacao_ano_serie: string; cd_tipo_ensino?: string; nm_tipo_ensino?: string };
-}
-
-interface RedacaoListItem {
-    id: string;
-    titulo: string;
-    nick: string;
-    nr_serie: string;
-    status: 'pendente' | 'corrigida' | 'rascunho' | 'concluida';
-    revisao_id?: string;
-    favorita?: boolean;
-    model_id?: string;
-    titulo_modelo?: string;
-    nm_tipo_ensino?: string;
-    answer_id?: string;
-}
-
-interface Highlight {
-    id?: string;
-    revisao_id?: string;
-    criterio_id: number;
-    cor: string;
-    start_index: number;
-    end_index: number;
-    texto_marcado: string;
-    observacao: string;
-    target?: 'texto' | 'devolutiva';
-}
-
-const CRITERIOS = [
-    { id: 1, name: 'Competência 1', desc: 'Domínio da norma culta' },
-    { id: 2, name: 'Competência 2', desc: 'Compreender a proposta' },
-    { id: 3, name: 'Competência 3', desc: 'Selecionar e organizar info' },
-    { id: 4, name: 'Competência 4', desc: 'Conhecimento linguístico' },
-    { id: 5, name: 'Competência 5', desc: 'Proposta de intervenção' },
+const CRITERIOS: Criterio[] = [
+    { id: 1, name: 'Competência 1', desc: 'Domínio da norma culta', full_desc: '' },
+    { id: 2, name: 'Competência 2', desc: 'Compreender a proposta', full_desc: '' },
+    { id: 3, name: 'Competência 3', desc: 'Selecionar e organizar info', full_desc: '' },
+    { id: 4, name: 'Competência 4', desc: 'Conhecimento linguístico', full_desc: '' },
+    { id: 5, name: 'Competência 5', desc: 'Proposta de intervenção', full_desc: '' },
 ];
+
+function sanitizeTextWithHighlights(text: string, hls: Highlight[]) {
+    if (!text) return { text: '', highlights: hls };
+
+    let sanitizedText = text;
+    let newHighlights = hls.map(h => ({ ...h }));
+
+    const patterns = [
+        { regex: /\\n/g, replacement: '\n' },
+        { regex: /\\t/g, replacement: '\t' },
+        { regex: /\\r/g, replacement: '\r' }
+    ];
+
+    let allMatches: { index: number, length: number, replacement: string }[] = [];
+
+    patterns.forEach(p => {
+        let match;
+        const re = new RegExp(p.regex);
+        while ((match = re.exec(text)) !== null) {
+            allMatches.push({
+                index: match.index,
+                length: match[0].length,
+                replacement: p.replacement
+            });
+        }
+    });
+
+    allMatches.sort((a, b) => b.index - a.index);
+
+    allMatches.forEach(m => {
+        const diff = m.length - m.replacement.length;
+        sanitizedText = sanitizedText.substring(0, m.index) + m.replacement + sanitizedText.substring(m.index + m.length);
+
+        newHighlights.forEach(h => {
+            if (m.index < h.start_index) {
+                h.start_index -= diff;
+                h.end_index -= diff;
+            } else if (m.index >= h.start_index && m.index < h.end_index) {
+                h.end_index -= diff;
+            }
+        });
+    });
+
+    // Also sanitize highlights text to match updated indices
+    newHighlights.forEach(h => {
+        let cleanMarked = h.texto_marcado;
+        patterns.forEach(p => {
+            cleanMarked = cleanMarked.replace(p.regex, p.replacement);
+        });
+        h.texto_marcado = cleanMarked;
+    });
+
+    return { text: sanitizedText, highlights: newHighlights };
+}
+
 
 export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) {
     const { user } = useAuth();
@@ -100,47 +120,72 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     // Toolbar UX State
     const [toolbarMode, setToolbarMode] = useState<'fixed' | 'floating'>('floating');
-    const [isDragging, setIsDragging] = useState(false);
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
-    const textContainerRef = React.useRef<HTMLDivElement>(null);
-
-    // Form state
-    const [formData, setFormData] = useState({
-        criterio_1_tema_1: '',
-        criterio_1_tema_2: '',
-        criterio_1_tema_3: '',
-        criterio_1_observacao: '',
-        criterio_2_tema_1: '',
-        criterio_2_tema_2: '',
-        criterio_2_tema_3: '',
-        criterio_2_observacao: '',
-        criterio_3_tema_1: '',
-        criterio_3_tema_2: '',
-        criterio_3_tema_3: '',
-        criterio_3_observacao: '',
-        criterio_4_tema_1: '',
-        criterio_4_tema_2: '',
-        criterio_4_tema_3: '',
-        criterio_4_observacao: '',
-        criterio_5_tema_1: '',
-        criterio_5_tema_2: '',
-        criterio_5_tema_3: '',
-        criterio_5_observacao: '',
+    const [formData, setFormData] = useState<Record<string, any>>({
         comentario_geral: '',
-        favorita: false
+        favorita: false,
+        suspeita_ia: false,
+        motivo_suspeita_ia: ''
     });
 
-    const [filterNick, setFilterNick] = useState('');
-    const [filterSerie, setFilterSerie] = useState('');
-    const [filterTitulo, setFilterTitulo] = useState('');
-    const [filterFavorita, setFilterFavorita] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const textContainerRef = React.useRef<HTMLDivElement>(null);
+
+    // Dirty state tracking
+    const [pristineFormData, setPristineFormData] = useState<Record<string, any>>({});
+    const [pristineHighlights, setPristineHighlights] = useState<Highlight[]>([]);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+    const isDirty = useCallback(() => {
+        const currentDataStr = JSON.stringify(formData);
+        const pristineDataStr = JSON.stringify(pristineFormData);
+        if (currentDataStr !== pristineDataStr) return true;
+
+        if (highlights.length !== pristineHighlights.length) return true;
+        
+        // Simple comparison for highlights
+        return JSON.stringify(highlights) !== JSON.stringify(pristineHighlights);
+    }, [formData, pristineFormData, highlights, pristineHighlights]);
+
+    const handleExitMesa = useCallback((force = false) => {
+        if (!force && isDirty()) {
+            setShowExitConfirm(true);
+            return;
+        }
+
+        setShowExitConfirm(false);
+        if (initialAnswerId) {
+            router.push('/dashboard');
+        } else {
+            setView('list');
+            setHighlightPopup(null);
+            setRedacao(null);
+            // Se carregou uma redação específica via answer_id, limpa o query param/rota para não re-carregar ao abrir a lista
+            if (window.location.pathname.includes('/dashboard/revisao')) {
+                router.push('/dashboard');
+            }
+        }
+    }, [isDirty, initialAnswerId, router]);
 
     // Accordion UI State
     const [activeCriterio, setActiveCriterio] = useState<number>(1);
 
+    const criterios = React.useMemo(() => {
+        if (redacao?.assessed_skills && redacao.assessed_skills.length > 0) {
+            return redacao.assessed_skills.map((s, idx) => ({
+                id: idx + 1,
+                name: `Competência ${idx + 1}`,
+                desc: s.statement,
+                full_desc: s.description
+            }));
+        }
+        return CRITERIOS.map(c => ({ ...c, full_desc: '' }));
+    }, [redacao]);
+
     // Readability State
     const [readMode, setReadMode] = useState<boolean>(false);
+    const [isInfoModalOpen, setIsInfoModalOpen] = useState<boolean>(false);
 
     const getCriterioStatus = (criterioId: number) => {
         const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
@@ -154,7 +199,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         return 'empty';
     };
 
-    const isAllComplete = CRITERIOS.every(c => getCriterioStatus(c.id) === 'complete');
+    const isAllComplete = criterios.every(c => getCriterioStatus(c.id) === 'complete');
 
     const fetchLista = useCallback(async () => {
         if (!user) return;
@@ -254,7 +299,26 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 .single();
 
             if (redacaoError) throw redacaoError;
-            setRedacao(redacaoData);
+
+            // Sanitização inicial: buscamos os destaques da redação para alinhar com a limpeza do texto
+            // Se ainda não carregamos a revisão, passamos array vazio
+            let finalEssay = redacaoData.essay || '';
+            let finalSkills = redacaoData.evaluated_skills || [];
+
+            // Limpeza recursiva para todos os comentários da IA
+            finalSkills = finalSkills.map((s: any) => {
+                if (!s.comment) return s;
+                const { text: cleanComment } = sanitizeTextWithHighlights(s.comment, []);
+                return { ...s, comment: cleanComment };
+            });
+
+            const processedRedacao = {
+                ...redacaoData,
+                essay: finalEssay,
+                evaluated_skills: finalSkills
+            };
+
+            setRedacao(processedRedacao);
 
             // Se tem revisão feita por esse corretor, popula o form
             if (revisaoId) {
@@ -287,15 +351,88 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         criterio_5_tema_3: revData.criterio_5_tema_3 || '',
                         criterio_5_observacao: revData.criterio_5_observacao || '',
                         comentario_geral: revData.comentario_geral || '',
-                        favorita: revData.favorita || false
+                        favorita: revData.favorita || false,
+                        suspeita_ia: revData.suspeita_ia || false,
+                        motivo_suspeita_ia: revData.motivo_suspeita_ia || ''
                     });
-                    setHighlights(revData.revisao_destaques || []);
+
+                    // Caso existam avaliações no campo JSONB (novo esquema), popula o form
+                    let dynamicData: any = {};
+                    if (revData.avaliacoes && Array.isArray(revData.avaliacoes)) {
+                        revData.avaliacoes.forEach((av: any) => {
+                            dynamicData[`criterio_${av.criterio_id}_tema_1`] = av.tema_1 || '';
+                            dynamicData[`criterio_${av.criterio_id}_tema_2`] = av.tema_2 || '';
+                            dynamicData[`criterio_${av.criterio_id}_tema_3`] = av.tema_3 || '';
+                            dynamicData[`criterio_${av.criterio_id}_observacao`] = av.observacao || '';
+                        });
+                        setFormData(prev => ({ ...prev, ...dynamicData }));
+                    }
+
+                    // Aplicar sanitização no texto da redação E nos destaques simultaneamente
+                    const { text: cleanEssay, highlights: cleanHighlights } = sanitizeTextWithHighlights(
+                        redacaoData.essay,
+                        revData.revisao_destaques?.filter((h: any) => !h.target || h.target === 'texto') || []
+                    );
+
+                    const devHighlightsRaw = revData.revisao_destaques?.filter((h: any) => h.target === 'devolutiva') || [];
+                    let cleanDevHighlights: Highlight[] = [];
+
+                    // Important: Use original redacaoData.evaluated_skills for alignment, NOT the already sanitized finalSkills
+                    const cleanSkills = (redacaoData.evaluated_skills || []).map((s: any, idx: number) => {
+                        const critId = idx + 1;
+                        if (!s.comment) return s;
+                        
+                        const skillHls = devHighlightsRaw.filter((h: any) => h.criterio_id === critId);
+                        const { text: cleanComment, highlights: processedSkillHls } = sanitizeTextWithHighlights(s.comment, skillHls);
+                        
+                        cleanDevHighlights = [...cleanDevHighlights, ...processedSkillHls];
+                        return { ...s, comment: cleanComment };
+                    });
+
+                    setRedacao({
+                        ...processedRedacao,
+                        essay: cleanEssay,
+                        evaluated_skills: cleanSkills
+                    });
+
+                    setHighlights([...cleanHighlights, ...cleanDevHighlights]);
+
+                    // Initialize pristine states
+                    const loadedForm = {
+                        criterio_1_tema_1: revData.criterio_1_tema_1 || '',
+                        criterio_1_tema_2: revData.criterio_1_tema_2 || '',
+                        criterio_1_tema_3: revData.criterio_1_tema_3 || '',
+                        criterio_1_observacao: revData.criterio_1_observacao || '',
+                        criterio_2_tema_1: revData.criterio_2_tema_1 || '',
+                        criterio_2_tema_2: revData.criterio_2_tema_2 || '',
+                        criterio_2_tema_3: revData.criterio_2_tema_3 || '',
+                        criterio_2_observacao: revData.criterio_2_observacao || '',
+                        criterio_3_tema_1: revData.criterio_3_tema_1 || '',
+                        criterio_3_tema_2: revData.criterio_3_tema_2 || '',
+                        criterio_3_tema_3: revData.criterio_3_tema_3 || '',
+                        criterio_3_observacao: revData.criterio_3_observacao || '',
+                        criterio_4_tema_1: revData.criterio_4_tema_1 || '',
+                        criterio_4_tema_2: revData.criterio_4_tema_2 || '',
+                        criterio_4_tema_3: revData.criterio_4_tema_3 || '',
+                        criterio_4_observacao: revData.criterio_4_observacao || '',
+                        criterio_5_tema_1: revData.criterio_5_tema_1 || '',
+                        criterio_5_tema_2: revData.criterio_5_tema_2 || '',
+                        criterio_5_tema_3: revData.criterio_5_tema_3 || '',
+                        criterio_5_observacao: revData.criterio_5_observacao || '',
+                        comentario_geral: revData.comentario_geral || '',
+                        favorita: revData.favorita || false,
+                        suspeita_ia: revData.suspeita_ia || false,
+                        motivo_suspeita_ia: revData.motivo_suspeita_ia || '',
+                        ...dynamicData
+                    };
+                    setPristineFormData(loadedForm);
+                    setPristineHighlights([...cleanHighlights, ...cleanDevHighlights]);
                 }
             } else {
                 // Reset form
                 setHighlights([]);
                 setHighlightPopup(null);
-                setFormData({
+                const initialForm = {
                     criterio_1_tema_1: '',
                     criterio_1_tema_2: '',
                     criterio_1_tema_3: '',
@@ -317,8 +454,13 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                     criterio_5_tema_3: '',
                     criterio_5_observacao: '',
                     comentario_geral: '',
-                    favorita: false
-                });
+                    favorita: false,
+                    suspeita_ia: false,
+                    motivo_suspeita_ia: ''
+                };
+                setFormData(initialForm);
+                setPristineFormData(initialForm);
+                setPristineHighlights([]);
             }
         } catch (err) {
             console.error('Erro ao buscar redação:', err);
@@ -349,12 +491,22 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
             let finalRevisaoId = revData?.id;
 
+            // Mapeia avaliações dinâmicas para o campo JSONB 'avaliacoes'
+            const avaliacoes = criterios.map(c => ({
+                criterio_id: c.id,
+                tema_1: (formData as any)[`criterio_${c.id}_tema_1`],
+                tema_2: (formData as any)[`criterio_${c.id}_tema_2`],
+                tema_3: (formData as any)[`criterio_${c.id}_tema_3`],
+                observacao: (formData as any)[`criterio_${c.id}_observacao`]
+            }));
+
             if (revData?.id) {
                 // Update
                 const { error } = await supabase
                     .from('revisoes')
                     .update({
                         ...formData,
+                        avaliacoes,
                         status: isDraft ? 'rascunho' : 'concluida',
                         data_correcao: new Date().toISOString()
                     })
@@ -368,6 +520,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         redacao_id: redacao.id,
                         corretor_id: user.id,
                         ...formData,
+                        avaliacoes,
                         status: isDraft ? 'rascunho' : 'concluida',
                         data_correcao: new Date().toISOString()
                     }])
@@ -375,6 +528,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 if (error) throw error;
                 finalRevisaoId = insertResult.id;
             }
+
 
             if (finalRevisaoId) {
                 await supabase.from('revisao_destaques').delete().eq('revisao_id', finalRevisaoId);
@@ -402,10 +556,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
             toast.success(isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!');
 
+            // Synchronize pristine state after successful save
+            setPristineFormData({ ...formData });
+            setPristineHighlights([...highlights]);
+
             // Voltar pra lista apenas se estiver finalizando a revisão
             if (!isDraft) {
                 setTimeout(() => {
-                    setView('list');
+                    handleExitMesa();
                 }, 2000);
             }
 
@@ -417,13 +575,6 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         }
     };
 
-    const redacoesFiltradas = listaRedacoes.filter((r: any) => {
-        const matchNick = r.nick.toLowerCase().includes(filterNick.toLowerCase());
-        const matchSerie = r.nr_serie.toLowerCase().includes(filterSerie.toLowerCase());
-        const matchTitulo = r.titulo.toLowerCase().includes(filterTitulo.toLowerCase());
-        const matchFavorita = filterFavorita ? r.favorita === true : true;
-        return matchNick && matchSerie && matchTitulo && matchFavorita;
-    });
 
     const handleTextSelection = (e: React.MouseEvent) => {
         const sel = window.getSelection();
@@ -667,180 +818,18 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     };
 
     if (view === 'list') {
-        if (initialAnswerId && notFoundError) {
-            return (
-                <div className="flex-1 flex items-center justify-center p-8 bg-gray-50 bg-pattern min-h-[calc(100vh-64px)]">
-                    <div className="bg-white p-12 rounded-3xl shadow-xl max-w-md w-full text-center border border-gray-100 flex flex-col items-center">
-                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mb-6">
-                            <AlertCircle size={40} className="text-accent-red" />
-                        </div>
-                        <h2 className="text-2xl font-bold text-dark-gray mb-3">Redação não encontrada</h2>
-                        <p className="text-gray-500 mb-8 leading-relaxed">Não foi possível localizar nenhuma redação com o ID fornecido (<code className="bg-gray-100 px-2 py-1 rounded text-accent-red font-mono text-xs">{initialAnswerId}</code>) na base de dados.</p>
-
-                        <button
-                            onClick={() => window.location.href = '/dashboard/revisao'}
-                            className="bg-dark-gray text-white font-bold py-3 px-8 rounded-xl hover:bg-black transition-colors w-full flex items-center justify-center gap-2"
-                        >
-                            <ArrowLeft size={18} />
-                            Fila de Revisão
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
         return (
-            <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)] bg-gray-50/30">
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div>
-                        <h1 className="text-3xl font-bold text-dark-gray">Fila de Revisão</h1>
-                        <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
-                    </div>
-                </div>
-
-                {/* Filtros */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col gap-4">
-                    <div className="flex items-center gap-4 mb-2">
-                        <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-dark-gray">
-                            <input
-                                type="checkbox"
-                                checked={filterFavorita}
-                                onChange={(e) => setFilterFavorita(e.target.checked)}
-                                className="w-4 h-4 text-accent-red rounded border-gray-300 focus:ring-accent-red"
-                            />
-                            Apenas Favoritas
-                        </label>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tema / Título</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por tema..."
-                                value={filterTitulo}
-                                onChange={(e) => setFilterTitulo(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Autor (Nick)</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por nick..."
-                                value={filterNick}
-                                onChange={(e) => setFilterNick(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Série</label>
-                            <input
-                                type="text"
-                                placeholder="Buscar por série..."
-                                value={filterSerie}
-                                onChange={(e) => setFilterSerie(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                    {loadingLista ? (
-                        <div className="divide-y divide-gray-100 animate-pulse">
-                            {[1, 2, 3, 4, 5].map((i) => (
-                                <div key={i} className="w-full flex items-center justify-between p-6">
-                                    <div className="flex-1 pr-4">
-                                        <div className="flex gap-2 mb-3">
-                                            <div className="h-5 w-24 bg-gray-100 rounded"></div>
-                                            <div className="h-5 w-20 bg-gray-100 rounded"></div>
-                                        </div>
-                                        <div className="h-6 w-3/4 bg-gray-100 rounded mb-4"></div>
-                                        <div className="flex gap-3">
-                                            <div className="h-5 w-32 bg-gray-100 rounded"></div>
-                                            <div className="h-5 w-40 bg-gray-100 rounded"></div>
-                                        </div>
-                                    </div>
-                                    <div className="h-6 w-6 bg-gray-100 rounded-full"></div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : redacoesFiltradas.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center p-20 text-center animate-in fade-in duration-500">
-                            <div className="w-20 h-20 bg-gray-50 rounded-full flex flex-col items-center justify-center mb-6 border border-gray-100 shadow-sm">
-                                <Inbox className="h-10 w-10 text-gray-300" strokeWidth={1.5} />
-                            </div>
-                            <h3 className="text-xl font-bold text-dark-gray mb-2">Fila Vazia</h3>
-                            <p className="text-gray-500 max-w-sm">Nenhuma redação foi encontrada com as configurações atuais. Tente remover os filtros ou aguarde novas submissões.</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-gray-100">
-                            {redacoesFiltradas.map((item) => (
-                                <button
-                                    key={item.id}
-                                    onClick={() => {
-                                        if (item.answer_id) {
-                                            router.push(`/dashboard/revisao/${item.answer_id}`);
-                                        } else {
-                                            handleSelectRedacao(item.id, item.revisao_id);
-                                        }
-                                    }}
-                                    className="w-full flex items-center justify-between p-6 hover:bg-gray-50 hover:pl-8 transition-all text-left group"
-                                >
-                                    <div className="flex-1 min-w-0 pr-4">
-                                        <div className="flex items-center flex-wrap gap-2 mb-3">
-                                            {/* Badge do Modelo da Tarefa/Proposta */}
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-50 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-100" title="Modelo da Proposta/Tarefa">
-                                                <ClipboardList size={12} />
-                                                {item.model_id || 'Modelo Não Informado'}
-                                            </span>
-
-                                            {item.status === 'concluida' || item.status === 'corrigida' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-50 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-100">
-                                                    <Check size={12} />
-                                                    Concluída
-                                                </span>
-                                            ) : item.status === 'rascunho' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-50 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-100">
-                                                    <Clock size={12} />
-                                                    Rascunho
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-50 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-100">
-                                                    <Clock size={12} />
-                                                    Pendente
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <h3 className="text-lg font-bold text-dark-gray truncate group-hover:text-accent-red transition-colors mb-2">
-                                            {item.titulo_modelo || item.titulo}
-                                            {item.favorita && (
-                                                <Star size={16} className="inline-block ml-2 text-yellow-400 fill-yellow-400" />
-                                            )}
-                                        </h3>
-
-                                        <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">
-                                            <span className="flex items-center gap-1.5 text-gray-600 font-medium bg-gray-100 px-2 py-0.5 rounded">
-                                                <UserIcon size={14} className="text-gray-400" />
-                                                {item.nick}
-                                            </span>
-                                            <span className="text-gray-300">•</span>
-                                            <span className="flex items-center gap-1.5 text-gray-600">
-                                                <GraduationCap size={14} className="text-gray-400" />
-                                                {item.nm_tipo_ensino && `${item.nm_tipo_ensino} - `}{item.nr_serie}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="text-gray-300 group-hover:text-accent-red transition-colors transform group-hover:translate-x-1 duration-300" />
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
+            <RedacaoList
+                listaRedacoes={listaRedacoes}
+                loadingLista={loadingLista}
+                initialAnswerId={initialAnswerId}
+                notFoundError={notFoundError}
+                onSelectRedacao={handleSelectRedacao}
+                onGoToRevision={(answerId) => router.push(`/dashboard/revisao/${answerId}`)}
+            />
         );
     }
+
 
     if (loadingRedacao) {
         return (
@@ -929,304 +918,113 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     }
 
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] bg-white">
-            {/* Top Toolbar */}
-            <div className="h-14 border-b border-gray-100 flex items-center px-8 bg-gray-50/50 shrink-0">
-                <button
-                    onClick={() => {
-                        if (initialAnswerId) {
-                            window.location.href = '/dashboard/revisao';
-                        } else {
-                            setView('list');
-                        }
-                    }}
-                    className="flex items-center gap-2 text-sm font-medium text-gray-500 hover:text-dark-gray transition-colors"
-                >
-                    <ArrowLeft size={16} />
-                    Voltar para Fila
-                </button>
-            </div>
-
-            {/* Cabeçalho Condensado (Top Bar) */}
-            <div className="border-b border-gray-100 bg-white shrink-0 flex flex-col">
-                {/* Linha 1: Metadados da Redação e Ferramentas */}
-                <div className="flex items-center justify-between px-8 py-3 border-b border-gray-50 flex-wrap gap-4">
-                    <div className="flex items-center gap-5">
-                        <div className="flex items-center gap-3 text-gray-400">
-                            <UserIcon size={14} />
-                            <span className="text-[11px] font-bold uppercase tracking-widest text-dark-gray">{redacao.nick}</span>
-                            <span className="text-gray-200">|</span>
-                            <span className="text-[11px] font-medium">{redacao.extra_fields?.redacao_ano_serie}</span>
-                        </div>
-                        <div className="w-px h-4 bg-gray-200" />
-                        <h1 className="text-sm font-bold text-dark-gray truncate max-w-sm" title={redacao.title || 'Sem Título'}>
-                            {redacao.title || 'Sem Título'}
-                        </h1>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-gray-50 p-1 rounded-lg border border-gray-100">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider pl-2">Filtrar Grifos:</span>
-                            <select
-                                className="bg-transparent text-[11px] font-bold text-gray-600 outline-none cursor-pointer pr-1"
-                                value={filterHighlightCriterio}
-                                onChange={(e) => setFilterHighlightCriterio(e.target.value === 'all' ? 'all' : Number(e.target.value))}
-                            >
-                                <option value="all">TODOS</option>
-                                {CRITERIOS.map(c => <option key={`fh-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                            </select>
-                        </div>
-                        <button
-                            onClick={() => {
-                                setToolbarMode(prev => prev === 'floating' ? 'fixed' : 'floating');
-                                if (!window.getSelection()?.toString() && highlightPopup?.visible) {
-                                    setHighlightPopup(null);
-                                }
-                            }}
-                            className="flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors uppercase shadow-sm whitespace-nowrap"
-                        >
-                            {toolbarMode === 'floating' ? (
-                                <><Pin size={12} /> Fixar Barra Texto</>
-                            ) : (
-                                <><PinOff size={12} /> Barra Flutuante</>
-                            )}
-                        </button>
-                    </div>
-                </div>
-
-                {/* Linha 2: Avaliação e Abas */}
-                <div className="flex items-center justify-between px-8 py-2.5 bg-gray-50/30">
-                    <div className="flex items-center gap-4">
-                        <h2 className="text-xs font-bold text-dark-gray flex items-center gap-2 uppercase tracking-wider">
-                            <BookOpen className="text-accent-red" size={14} />
-                            Avaliação Técnica
-                        </h2>
-                        <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, favorita: !formData.favorita })}
-                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-colors ${formData.favorita
-                                ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                                : 'bg-white text-gray-400 border border-gray-200 hover:bg-yellow-50 hover:text-yellow-600'
-                                }`}
-                        >
-                            <Star size={10} className={formData.favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
-                            {formData.favorita ? 'Favorita' : 'Favoritar'}
-                        </button>
-                    </div>
-
-                    <div className="flex bg-gray-100/80 p-0.5 rounded-lg space-x-1 border border-gray-200/50">
-                        {CRITERIOS.map((c) => (
-                            <button
-                                key={`tab-${c.id}`}
-                                type="button"
-                                onClick={() => setActiveCriterio(c.id)}
-                                className={cn(
-                                    "px-4 py-1.5 rounded-md text-[10px] font-bold transition-all whitespace-nowrap",
-                                    activeCriterio === c.id
-                                        ? "bg-white text-dark-gray shadow-sm border border-gray-200/50 ring-2 ring-inset ring-gray-100"
-                                        : "text-gray-500 hover:text-dark-gray hover:bg-white/50",
-                                    getCriterioStatus(c.id) === 'complete' && activeCriterio !== c.id && "text-green-600 bg-green-50/50",
-                                    getCriterioStatus(c.id) === 'complete' && activeCriterio === c.id && "ring-green-200 text-green-700",
-                                    getCriterioStatus(c.id) === 'partial' && activeCriterio !== c.id && "text-yellow-600 bg-yellow-50/50",
-                                    getCriterioStatus(c.id) === 'partial' && activeCriterio === c.id && "ring-yellow-200 text-yellow-700"
-                                )}
-                            >
-                                <div className="flex items-center justify-center gap-1.5">
-                                    Competência {c.id}
-                                    {getCriterioStatus(c.id) === 'complete' && (
-                                        <CheckCircle2 size={12} className="text-green-500 shrink-0" />
-                                    )}
-                                    {getCriterioStatus(c.id) === 'partial' && (
-                                        <AlertCircle size={12} className="text-yellow-500 shrink-0" />
-                                    )}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+        <div className="flex flex-col h-[calc(100vh-64px)] bg-[#fdfaf2] overflow-hidden">
+            <CorrectionHeader
+                redacao={redacao}
+                criterios={criterios}
+                activeCriterio={activeCriterio}
+                setActiveCriterio={setActiveCriterio}
+                getCriterioStatus={getCriterioStatus}
+                filterHighlightCriterio={filterHighlightCriterio}
+                setFilterHighlightCriterio={setFilterHighlightCriterio}
+                toolbarMode={toolbarMode}
+                setToolbarMode={setToolbarMode}
+                favorita={formData.favorita}
+                setFavorita={(fav) => setFormData({ ...formData, favorita: fav })}
+                hasSelection={!!(window.getSelection()?.toString())}
+                onResetPopup={() => setHighlightPopup(null)}
+                readMode={readMode}
+                setReadMode={setReadMode}
+            />
 
             <div className="flex flex-1 overflow-hidden">
-                {/* Coluna da Esquerda: Leitura */}
-                <div className={cn(
-                    "w-1/2 overflow-y-auto border-r border-gray-100 p-8 lg:px-12 custom-scrollbar relative transition-colors duration-500",
-                    readMode ? "bg-[#fdfcf8]" : "bg-white"
-                )}>
-                    <div className="w-full flex justify-end mb-4">
-                        <button
-                            onClick={() => setReadMode(!readMode)}
-                            className={cn(
-                                "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded-full transition-colors border",
-                                readMode
-                                    ? "bg-stone-200 text-stone-700 border-stone-300 hover:bg-stone-300"
-                                    : "bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100"
-                            )}
-                        >
-                            <BookOpen size={12} />
-                            {readMode ? "Modo Normal" : "Modo Leitura"}
-                        </button>
-                    </div>
-
-                    <div className="w-full mx-auto max-w-[70ch]">
-                        {/* Barra Fixa (Estilo Word) */}
+                {/* Coluna da Esquerda: Texto */}
+                <div className="w-1/2 flex flex-col border-r border-gray-200/50 bg-[#fdfaf2] relative group/text transition-all duration-300">
+                    <div className="px-8 lg:px-12 py-8 overflow-y-auto custom-scrollbar flex-1">
                         {toolbarMode === 'fixed' && (
-                            <div className={cn(
-                                "mb-6 p-4 rounded-xl border transition-all duration-300",
-                                highlightPopup?.visible
-                                    ? "bg-white border-accent-red/30 shadow-[0_4px_20px_-5px_rgba(239,68,68,0.15)]"
-                                    : "bg-gray-50 border-gray-200 opacity-60 grayscale-[50%] pointer-events-none"
-                            )}>
-                                <div className="flex items-center gap-2 mb-3">
-                                    <Highlighter size={16} className={highlightPopup?.visible ? "text-accent-red" : "text-gray-400"} />
-                                    <span className="text-sm font-bold text-dark-gray">
-                                        {highlightPopup?.visible ? "Texto Selecionado: Adicionar Destaque" : "Selecione um texto para grifar..."}
-                                    </span>
-                                </div>
-                                <form onSubmit={handleAddHighlight} className="flex gap-3">
-                                    <select
-                                        required
-                                        value={highlightFormData.criterio_id}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
-                                        className="w-32 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    >
-                                        {CRITERIOS.map(c => <option key={`hp-f-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                    </select>
-                                    <select
-                                        required
-                                        value={highlightFormData.cor}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, cor: e.target.value })}
-                                        className="w-28 bg-gray-50 border border-gray-200 rounded-lg px-2 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    >
-                                        <option value="amarelo">Amarelo 🟨</option>
-                                        <option value="verde">Verde 🟩</option>
-                                        <option value="vermelho">Vermelho 🟥</option>
-                                    </select>
-                                    <input
-                                        type="text"
-                                        value={highlightFormData.observacao}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
-                                        placeholder="Observação rápida..."
-                                        className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none"
-                                    />
-                                    <button type="submit" className="bg-dark-gray text-white text-xs font-bold px-4 py-2 rounded-lg hover:bg-black transition-colors flex items-center justify-center gap-2">
-                                        <Check size={14} /> Salvar
-                                    </button>
-                                </form>
-                            </div>
+                            <FixedToolbar
+                                visible={!!(window.getSelection()?.toString())}
+                                criterios={criterios}
+                                formData={highlightFormData}
+                                setFormData={setHighlightFormData}
+                                onSubmit={handleAddHighlight}
+                            />
                         )}
+
+                        {/* Título da Redação */}
+                        <div className="mb-12 text-center">
+                            <h1 className="text-3xl font-serif font-bold text-dark-gray mb-2">
+                                {redacao.title || 'Sem Título'}
+                            </h1>
+                            <div className="w-24 h-1 bg-accent-red/20 mx-auto rounded-full" />
+                        </div>
 
                         <div
                             ref={textContainerRef}
                             onMouseUp={handleTextSelection}
                             className={cn(
-                                "font-serif whitespace-pre-wrap outline-none selection:bg-gray-200/60 transition-all duration-300",
-                                readMode
-                                    ? "text-xl text-stone-800 leading-[1.8]"
-                                    : "text-lg text-gray-800 leading-relaxed"
+                                "p-4 lg:p-8 text-gray-800 leading-[2.2] text-xl font-serif transition-all",
+                                readMode ? "max-w-4xl mx-auto" : "w-full"
                             )}
+                            style={{ whiteSpace: 'pre-wrap' }}
                         >
-                            {renderTextWithHighlights(redacao.essay || '', false)}
+                            {renderTextWithHighlights(redacao.essay)}
                         </div>
                     </div>
 
-                    {/* Pop-up do Marca-Texto Flutuante */}
-                    {highlightPopup?.visible && toolbarMode === 'floating' && (
-                        <div
-                            className={cn(
-                                "fixed z-50 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] border border-gray-100 p-5 w-80 animate-in fade-in zoom-in-95 outline-none transition-shadow",
-                                isDragging ? "shadow-2xl opacity-90 duration-0" : "duration-200"
-                            )}
-                            style={{
-                                top: Math.max(20, highlightPopup.y),
-                                left: Math.max(20, Math.min(window.innerWidth - 340, highlightPopup.x))
-                            }}
-                            onMouseUp={(e) => { e.stopPropagation(); setIsDragging(false); }}
-                        >
-                            <div
-                                className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100 cursor-move group"
-                                onMouseDown={handleDragStart}
-                            >
-                                <Move size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
-                                <Highlighter className="text-accent-red" size={16} />
-                                <h4 className="text-sm font-bold text-dark-gray">Criar Destaque Visual</h4>
-                                <button type="button" onMouseDown={(e) => e.stopPropagation()} onClick={() => { setHighlightPopup(null); setIsDragging(false); }} className="ml-auto text-gray-400 hover:text-gray-600">
-                                    <X size={16} />
-                                </button>
-                            </div>
-
-                            <form onSubmit={handleAddHighlight} className="space-y-4">
-                                <div className="grid grid-cols-2 gap-3">
-                                    {highlightPopup.target === 'texto' && (
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Critério Ref.</label>
-                                            <select
-                                                required
-                                                value={highlightFormData.criterio_id}
-                                                onChange={(e) => setHighlightFormData({ ...highlightFormData, criterio_id: Number(e.target.value) })}
-                                                className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
-                                            >
-                                                {CRITERIOS.map(c => <option key={`hp-${c.id}`} value={c.id}>Critério {c.id}</option>)}
-                                            </select>
-                                        </div>
-                                    )}
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cor</label>
-                                        <select
-                                            required
-                                            value={highlightFormData.cor}
-                                            onChange={(e) => setHighlightFormData({ ...highlightFormData, cor: e.target.value })}
-                                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-2 py-1.5 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none font-medium"
-                                        >
-                                            <option value="amarelo">Amarelo 🟨</option>
-                                            <option value="verde">Verde 🟩</option>
-                                            <option value="vermelho">Vermelho 🟥</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Observação sobre o trecho grifado</label>
-                                    <textarea
-                                        rows={2}
-                                        value={highlightFormData.observacao}
-                                        onChange={(e) => setHighlightFormData({ ...highlightFormData, observacao: e.target.value })}
-                                        placeholder="Ex: Trecho confuso, excelente uso de conjunção..."
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:ring-2 focus:ring-accent-red/20 outline-none resize-none"
-                                    />
-                                </div>
-
-                                <button type="submit" className="w-full bg-dark-gray text-white text-xs font-bold py-2.5 rounded-lg hover:bg-black transition-colors flex items-center justify-center gap-2">
-                                    <Check size={14} /> Salvar Destaque
-                                </button>
-                            </form>
-                        </div>
-                    )}
+                    <FloatingToolbar
+                        visible={!!(highlightPopup?.visible && toolbarMode === 'floating')}
+                        x={highlightPopup?.x || 0}
+                        y={highlightPopup?.y || 0}
+                        target={highlightPopup?.target || 'texto'}
+                        targetId={highlightPopup?.targetId}
+                        criterios={criterios}
+                        formData={highlightFormData}
+                        setFormData={setHighlightFormData}
+                        onSubmit={handleAddHighlight}
+                        onClose={() => setHighlightPopup(null)}
+                        isDragging={isDragging}
+                        onDragStart={handleDragStart}
+                    />
                 </div>
 
                 {/* Coluna da Direita: Formulário */}
-                <div className="w-1/2 overflow-y-auto bg-gray-50/50 custom-scrollbar relative">
+                <div className="w-1/2 overflow-y-auto bg-[#fdfaf2] custom-scrollbar relative border-l border-gray-200/50">
                     <div className="w-full">
                         <form onSubmit={(e) => handleSaveRevisao(e, false)} className="pb-8">
                             {/* Conteúdo da Competência Ativa */}
                             {(() => {
-                                const c = CRITERIOS.find(crit => crit.id === activeCriterio);
+                                const c = criterios.find(crit => crit.id === activeCriterio);
                                 if (!c) return null;
 
                                 const skill = redacao.evaluated_skills?.[c.id - 1];
                                 const notasIA = skill?.score ?? 0;
                                 const devolutivaIA = skill?.comment ?? '';
-                                const criterionHighlights = highlights.filter(h => h.criterio_id === c.id && (!h.target || h.target === 'texto'));
 
                                 return (
                                     <div key={`content-${c.id}`} className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-                                        <div className="sticky top-0 z-10 bg-gray-50/95 backdrop-blur-sm border-b border-gray-200 flex items-start justify-between px-8 lg:px-12 py-6 shadow-sm">
-                                            <div>
-                                                <h3 className="font-bold text-dark-gray text-2xl mb-1">
-                                                    {c.name}
-                                                </h3>
+                                        <div className={cn(
+                                            "sticky top-0 z-10 border-b border-gray-200 flex items-start justify-between px-8 lg:px-12 py-6 transition-all",
+                                            readMode ? "bg-transparent opacity-40 hover:opacity-100" : "bg-[#fdfaf2]/95 backdrop-blur-sm shadow-sm"
+                                        )}>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <h3 className="font-bold text-dark-gray text-2xl">
+                                                        {c.name}
+                                                    </h3>
+                                                    {c.full_desc && (
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setIsInfoModalOpen(true)}
+                                                            className="text-gray-400 hover:text-dark-gray focus:outline-none transition-colors"
+                                                        >
+                                                            <HelpCircle size={18} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                                 <p className="text-[12px] font-bold text-gray-500 uppercase tracking-widest">{c.desc}</p>
                                             </div>
-                                            <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10">
+                                            <div className="bg-accent-red/5 px-5 py-2.5 rounded-full border border-accent-red/10 shrink-0">
                                                 <span className="text-sm font-bold text-accent-red">Nota IA: {notasIA}</span>
                                             </div>
                                         </div>
@@ -1234,224 +1032,297 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                         <div className="px-8 lg:px-12 mt-8">
                                             {/* Bloco da IA */}
                                             <div className="mb-10">
-                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                    <BookOpen size={16} />
-                                                    Devolutiva da Inteligência Artificial
-                                                </h4>
+                                                <div className="flex items-center gap-2 mb-4">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-accent-red" />
+                                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Devolutiva Inteligente</h4>
+                                                </div>
                                                 <div
-                                                    className="text-[17px] font-serif text-gray-800 leading-[1.8] whitespace-pre-wrap selection:bg-purple-500/20 bg-gradient-to-b from-purple-50/40 to-white p-8 rounded-2xl border border-purple-100/60 shadow-sm"
                                                     data-devolutiva="true"
                                                     data-criterio-id={c.id}
                                                     onMouseUp={handleTextSelection}
+                                                    className="p-4 lg:p-6 text-[15px] text-gray-700 leading-relaxed font-medium relative group"
                                                 >
                                                     {renderTextWithHighlights(devolutivaIA, true, c.id)}
                                                 </div>
+                                            </div>
 
-                                                {/* Grifos atrelados a este critério */}
-                                                {criterionHighlights.length > 0 && (
-                                                    <div className="mt-6 pt-6 border-t border-gray-100">
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">
-                                                            Trechos Grifados na Redação ({criterionHighlights.length})
-                                                        </p>
-                                                        <div className="flex flex-col gap-3">
-                                                            {criterionHighlights.map((h, idx) => (
-                                                                <div key={`hc-${idx}`} className="bg-white border border-gray-100 rounded-xl p-4 text-sm flex gap-4 shadow-sm relative group hover:border-gray-200 transition-colors">
-                                                                    <div className={cn("w-1.5 rounded-full shrink-0 shadow-sm",
-                                                                        h.cor === 'verde' ? 'bg-green-400' :
-                                                                            h.cor === 'vermelho' ? 'bg-red-400' : 'bg-yellow-400'
-                                                                    )}></div>
-                                                                    <div className="pr-6">
-                                                                        <p className="text-gray-800 italic line-clamp-3 leading-relaxed">&quot;{h.texto_marcado}&quot;</p>
-                                                                        {h.observacao && <p className="text-gray-500 text-xs mt-2 font-medium bg-gray-50 inline-block px-3 py-1.5 rounded-lg">{h.observacao}</p>}
-                                                                    </div>
-                                                                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)}
-                                                                                    className="text-gray-300 hover:text-blue-500 bg-white p-1.5 rounded-md hover:bg-blue-50 shadow-sm border border-gray-100"
-                                                                                    aria-label="Editar Destaque"
-                                                                                >
-                                                                                    <Highlighter size={16} />
-                                                                                </button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent side="top">Editar Destaque</TooltipContent>
-                                                                        </Tooltip>
-                                                                        <Tooltip>
-                                                                            <TooltipTrigger asChild>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))}
-                                                                                    className="text-gray-300 hover:text-red-500 bg-white p-1.5 rounded-md hover:bg-red-50 shadow-sm border border-gray-100"
-                                                                                    aria-label="Remover Destaque"
-                                                                                >
-                                                                                    <X size={16} />
-                                                                                </button>
-                                                                            </TooltipTrigger>
-                                                                            <TooltipContent side="top">Remover Destaque</TooltipContent>
-                                                                        </Tooltip>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                            {/* Bloco do Corretor */}
+                                            {!readMode && (
+                                                <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-dark-gray" />
+                                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Avaliação Final</h4>
+                                                    </div>
+
+                                                    <div className="flex flex-col gap-6">
+                                                        {/* Tema 1 */}
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação de pontos positivos</label>
+                                                            <select
+                                                                required={!submitting}
+                                                                value={(formData as any)[`criterio_${c.id}_tema_1`]}
+                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
+                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
+                                                            >
+                                                                <option value="">Selecione...</option>
+                                                                <optgroup label="Correto">
+                                                                    <option value="Satisfatório">Satisfatório</option>
+                                                                    <option value="Vago">Vago</option>
+                                                                    <option value="Incompleto">Incompleto</option>
+                                                                    <option value="Com erros">Com erros</option>
+                                                                </optgroup>
+                                                                <optgroup label="Incorreto">
+                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                    <option value="Não identificou">Não identificou</option>
+                                                                    <option value="Alucinação">Alucinação</option>
+                                                                </optgroup>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* Tema 2 */}
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação do problema que levou à perda de nota (quando há perda)</label>
+                                                            <select
+                                                                required={!submitting}
+                                                                value={(formData as any)[`criterio_${c.id}_tema_2`]}
+                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
+                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
+                                                            >
+                                                                <option value="">Selecione...</option>
+                                                                <optgroup label="Correto">
+                                                                    <option value="Satisfatório">Satisfatório</option>
+                                                                    <option value="Vago">Vago</option>
+                                                                    <option value="Incompleto">Incompleto</option>
+                                                                    <option value="Com erros">Com erros</option>
+                                                                </optgroup>
+                                                                <optgroup label="Incorreto">
+                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                    <option value="Não identificou">Não identificou</option>
+                                                                    <option value="Alucinação">Alucinação</option>
+                                                                </optgroup>
+                                                            </select>
+                                                        </div>
+
+                                                        {/* Tema 3 */}
+                                                        <div>
+                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sugestão de melhoria ao estudante (quando necessária).</label>
+                                                            <select
+                                                                required={!submitting}
+                                                                value={(formData as any)[`criterio_${c.id}_tema_3`]}
+                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
+                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
+                                                            >
+                                                                <option value="">Selecione...</option>
+                                                                <optgroup label="Correto">
+                                                                    <option value="Satisfatório">Satisfatório</option>
+                                                                    <option value="Vago">Vago</option>
+                                                                    <option value="Incompleto">Incompleto</option>
+                                                                    <option value="Com erros">Com erros</option>
+                                                                </optgroup>
+                                                                <optgroup label="Incorreto">
+                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
+                                                                    <option value="Não identificou">Não identificou</option>
+                                                                    <option value="Alucinação">Alucinação</option>
+                                                                </optgroup>
+                                                            </select>
                                                         </div>
                                                     </div>
-                                                )}
-                                            </div>
 
-                                            {/* Campos de Revisão Manual */}
-                                            <div className="space-y-6">
-                                                <h4 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2 select-none">
-                                                    <UserIcon size={16} />
-                                                    Sua Avaliação
-                                                </h4>
-
-                                                <div className="flex flex-col gap-6">
-                                                    {/* Tema 1 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação de pontos positivos</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_1`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
-                                                    </div>
-
-                                                    {/* Tema 2 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação do problema que levou à perda de nota (quando há perda)</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_2`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
-                                                    </div>
-
-                                                    {/* Tema 3 */}
-                                                    <div>
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sugestão de melhoria ao estudante (quando necessária).</label>
-                                                        <select
-                                                            value={(formData as any)[`criterio_${c.id}_tema_3`]}
-                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all text-dark-gray"
-                                                        >
-                                                            <option value="">Selecione...</option>
-                                                            <optgroup label="Correto">
-                                                                <option value="Satisfatório">Satisfatório</option>
-                                                                <option value="Vago">Vago</option>
-                                                                <option value="Incompleto">Incompleto</option>
-                                                                <option value="Com erros">Com erros</option>
-                                                            </optgroup>
-                                                            <optgroup label="Incorreto">
-                                                                <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                <option value="Não identificou">Não identificou</option>
-                                                                <option value="Alucinação">Alucinação</option>
-                                                            </optgroup>
-                                                        </select>
+                                                    <div className="space-y-3 mt-8">
+                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider pl-1">
+                                                            Observação do Critério
+                                                        </label>
+                                                        <textarea
+                                                            rows={4}
+                                                            value={(formData as any)[`criterio_${c.id}_observacao`]}
+                                                            onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
+                                                            placeholder="Descreva pontos positivos e negativos..."
+                                                            className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-2xl px-5 py-4 text-sm focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all resize-none min-h-[120px]"
+                                                        />
                                                     </div>
                                                 </div>
-
-                                                {/* Observação */}
-                                                <div>
-                                                    <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 mt-6 text-left">Observações adicionais (opcional)</label>
-                                                    <textarea
-                                                        rows={3}
-                                                        value={(formData as any)[`criterio_${c.id}_observacao`]}
-                                                        onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
-                                                        placeholder="Detalhe o contexto das avaliações acima se achar necessário..."
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/10 focus:border-accent-red outline-none transition-all resize-none text-gray-700"
-                                                    />
-                                                </div>
-
-                                            </div>
+                                            )}
                                         </div>
                                     </div>
                                 );
                             })()}
-
-                            <div className="bg-white p-7 rounded-2xl border border-gray-100 shadow-sm mt-8 mx-8 lg:mx-12">
-                                <label className="block text-lg font-bold text-dark-gray mb-1">Comentário Final do Corretor</label>
-                                <p className="text-sm font-medium text-gray-400 mb-4">Revisão geral e fechamento (opcional).</p>
-                                <textarea
-                                    rows={4}
-                                    value={formData.comentario_geral}
-                                    onChange={(e) => setFormData({ ...formData, comentario_geral: e.target.value })}
-                                    placeholder="Escreva aqui suas observações gerais sobre a avaliação da IA..."
-                                    className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all resize-none shadow-sm"
-                                />
-                            </div>
-
-                            <div className="mx-8 lg:mx-12 mt-6">
-                                <div className="p-4 bg-white border outline-none border-gray-100 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-                                    <div className="flex-1 text-xs text-gray-500 font-medium">
-                                        {isAllComplete ? (
-                                            <span className="text-green-600 flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-md w-fit">
-                                                <CheckCircle2 size={14} /> Pronto para finalizar
-                                            </span>
-                                        ) : (
-                                            <span className="text-yellow-600 flex items-center gap-1.5 bg-yellow-50 px-3 py-1.5 rounded-md w-fit">
-                                                <AlertCircle size={14} /> Preencha todas as competências para finalizar
-                                            </span>
-                                        )}
-                                    </div>
-                                    <div className="flex w-full md:w-auto gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => handleSaveRevisao(e, true)}
-                                            disabled={submitting}
-                                            className="w-full md:w-auto px-6 py-3 rounded-xl font-bold bg-white text-dark-gray border border-gray-200 hover:bg-gray-50 focus:ring-4 focus:ring-gray-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Save size={18} />
-                                            <span>Salvar Rascunho</span>
-                                        </button>
-
-                                        <button
-                                            type="submit"
-                                            disabled={submitting || !isAllComplete}
-                                            className="w-full md:w-auto px-8 py-3 rounded-xl font-bold text-white bg-dark-gray hover:bg-black focus:ring-4 focus:ring-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg active:scale-[0.98] flex items-center justify-center gap-2 group"
-                                        >
-                                            {submitting ? (
-                                                <Loader2 className="animate-spin" size={20} />
-                                            ) : (
-                                                <>
-                                                    <span>Finalizar Revisão</span>
-                                                    <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                                                </>
-                                            )}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
                         </form>
+
+                        {!readMode && (
+                            <div className="mt-8 pt-8 border-t border-gray-100 flex flex-col gap-6">
+                                <div className="flex items-center justify-between bg-white/50 p-4 rounded-2xl border border-gray-200/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className={cn(
+                                            "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                                            formData.suspeita_ia ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-400"
+                                        )}>
+                                            <AlertCircle size={20} />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-bold text-dark-gray">Suspeita de uso de IA</h4>
+                                            <p className="text-xs text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, suspeita_ia: !formData.suspeita_ia })}
+                                        className={cn(
+                                            "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none",
+                                            formData.suspeita_ia ? "bg-red-500" : "bg-gray-200"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+                                                formData.suspeita_ia ? "translate-x-6" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+
+                                {formData.suspeita_ia && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 pl-1">Por que você suspeita de IA? (Opcional)</label>
+                                        <textarea
+                                            value={formData.motivo_suspeita_ia}
+                                            onChange={(e) => setFormData({ ...formData, motivo_suspeita_ia: e.target.value })}
+                                            placeholder="Ex: Padrões repetitivos, vocabulário genérico, falta de conexão lógica..."
+                                            rows={3}
+                                            className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-red-500/5 focus:border-red-500/30 outline-none transition-all resize-none"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Barra de Ações Fixa */}
+            {!readMode && (
+                <div className="h-20 bg-white border-t border-gray-100 flex items-center justify-between px-8 lg:px-12 shrink-0 z-20 animate-in slide-in-from-bottom-full duration-500">
+                    <button
+                        onClick={() => handleExitMesa()}
+                        className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-dark-gray transition-colors group"
+                    >
+                        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                        Sair da Mesa
+                    </button>
+
+                    <div className="flex items-center gap-4">
+                        <button
+                            type="button"
+                            onClick={(e) => handleSaveRevisao(e, true)}
+                            disabled={submitting}
+                            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-dark-gray bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 transition-all disabled:opacity-50"
+                        >
+                            <Loader2 size={16} className={cn("animate-spin", !submitting && "hidden")} />
+                            Salvar Rascunho
+                        </button>
+                        <button
+                            type="button"
+                            onClick={(e) => handleSaveRevisao(e, false)}
+                            disabled={submitting}
+                            className={cn(
+                                "flex items-center gap-2 px-8 py-2.5 text-sm font-bold text-white rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50",
+                                isAllComplete ? "bg-accent-red shadow-accent-red/20" : "bg-gray-400"
+                            )}
+                        >
+                            {submitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                            Finalizar Revisão
+                        </button>
+                    </div>
+                </div>
+            )}
+            {/* Modal de Informação do Critério */}
+            {isInfoModalOpen && criterios.find(crit => crit.id === activeCriterio) && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" 
+                        onClick={() => setIsInfoModalOpen(false)}
+                    />
+                    <div className="bg-[#fdfaf2] w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
+                        <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div>
+                                <h3 className="text-xl font-bold text-dark-gray">{criterios.find(crit => crit.id === activeCriterio)?.name}</h3>
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Definição e Critérios de Avaliação</p>
+                            </div>
+                            <button 
+                                onClick={() => setIsInfoModalOpen(false)}
+                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400 hover:text-dark-gray"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-8 overflow-y-auto custom-scrollbar flex-1">
+                            <div className="prose prose-slate max-w-none">
+                                <div className="text-gray-700 leading-relaxed font-serif text-lg space-y-6" style={{ whiteSpace: 'pre-wrap' }}>
+                                    {(() => {
+                                        const desc = criterios.find(crit => crit.id === activeCriterio)?.full_desc || '';
+                                        const { text: cleanDesc } = sanitizeTextWithHighlights(desc, []);
+                                        return cleanDesc;
+                                    })()}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
+                            <button 
+                                onClick={() => setIsInfoModalOpen(false)}
+                                className="px-6 py-2.5 bg-dark-gray text-white text-sm font-bold rounded-xl hover:bg-black transition-all"
+                            >
+                                Entendi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Confirmação de Saída (Unsaved Changes) */}
+            {showExitConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div 
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" 
+                        onClick={() => setShowExitConfirm(false)}
+                    />
+                    <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-8 animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center gap-4 text-accent-red mb-6">
+                            <div className="w-12 h-12 rounded-full bg-accent-red/10 flex items-center justify-center">
+                                <AlertCircle size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-dark-gray text-center">Alterações não salvas!</h3>
+                        </div>
+                        
+                        <p className="text-gray-600 text-sm leading-relaxed mb-8 text-center">
+                            Você possui alterações que ainda não foram salvas como rascunho. Se sair agora, o progresso desta sessão será perdido.
+                        </p>
+
+                        <div className="flex flex-col gap-3">
+                            <button 
+                                onClick={(e) => {
+                                    handleSaveRevisao(e, true);
+                                    setShowExitConfirm(false);
+                                }}
+                                className="w-full py-3.5 bg-dark-gray text-white font-bold rounded-xl hover:bg-black transition-all shadow-lg"
+                            >
+                                Salvar Rascunho e Sair
+                            </button>
+                            <button 
+                                onClick={() => handleExitMesa(true)}
+                                className="w-full py-3.5 bg-gray-50 text-gray-500 font-bold rounded-xl hover:bg-gray-100 hover:text-dark-gray transition-all text-sm"
+                            >
+                                Sair sem salvar
+                            </button>
+                            <button 
+                                onClick={() => setShowExitConfirm(false)}
+                                className="w-full py-3.5 text-gray-400 font-bold hover:text-dark-gray transition-all text-xs"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+
