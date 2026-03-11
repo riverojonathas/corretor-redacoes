@@ -63,5 +63,18 @@ Implementamos um novo nível de auditoria para as notas atribuídas pela intelig
 - **Escala de Desvio**: Possibilidade de marcar a nota como "Adequada" ou indicar desvios específicos (1pt, 2pts ou >2pts) acima ou abaixo do esperado.
 - **Fluxo de Trabalho Rigoroso**: A conclusão de um critério agora exige o preenchimento dos 4 campos de avaliação, garantindo uma auditoria completa.
 
+> [!IMPORTANT]
+> **Ação Necessária**: Esta atualização requer a execução do script SQL abaixo no editor do Supabase para adicionar as novas colunas de avaliação (`tema_4`) na tabela `revisoes`.
+
+```sql
+-- Adicionar novas colunas de avaliação de nota (Tema 4) para todos os critérios
+ALTER TABLE public.revisoes 
+ADD COLUMN criterio_1_tema_4 text,
+ADD COLUMN criterio_2_tema_4 text,
+ADD COLUMN criterio_3_tema_4 text,
+ADD COLUMN criterio_4_tema_4 text,
+ADD COLUMN criterio_5_tema_4 text;
+```
+
 ---
 *Alimentado automaticamente para a página /ajuda*
