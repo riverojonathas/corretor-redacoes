@@ -964,7 +964,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         )}
 
                         {/* Título da Redação */}
-                        <div className="max-w-4xl mx-auto py-8 lg:py-12 px-4 sm:px-8">
+                        <div className="max-w-4xl mx-auto py-8 lg:pt-12 lg:pb-4 px-4 sm:px-8">
                             <h2 className="text-2xl font-serif font-black text-dark-gray mb-6 text-center leading-tight tracking-tight">
                                 {redacao.title || 'Sem Título'}
                             </h2>
@@ -985,7 +985,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         </div>
 
                         {!readMode && (
-                            <div className="mt-12 pt-12 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
+                            <div className="mt-6 pt-6 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
                                 <div className="flex items-center justify-between bg-white/20 p-6 rounded-3xl border border-gray-200/50 shadow-sm">
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
