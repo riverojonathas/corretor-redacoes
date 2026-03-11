@@ -53,8 +53,6 @@ export function Topbar() {
             const href = '/' + parts.slice(0, index + 1).join('/');
             const label = labels[part] || part.charAt(0).toUpperCase() + part.slice(1);
 
-            console.log('Breadcrumb:', { part, href, label, isLast });
-
             return (
                 <React.Fragment key={href}>
                     {index > 0 && <span className="text-gray-300">/</span>}
@@ -149,7 +147,7 @@ export function Topbar() {
                         </div>
                     )}
                 </div>
-            </div >
-        </header >
+            </div>
+        </header>
     );
 }

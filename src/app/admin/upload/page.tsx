@@ -84,10 +84,10 @@ export default function AdminUploadPage() {
                             genre: row.genre,
                             statement: row['evaluated_skills[0].statement'] || row.statement || '',
                             support_text: row.support_text || '',
-                            consumer_init: row.ConsumerInit ? new Date(row.ConsumerInit).toISOString() : null,
-                            consumer_finish: row.ConsumerFinish ? new Date(row.ConsumerFinish).toISOString() : null,
-                            created_at: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
-                            updated_at: row.updatedAt ? new Date(row.updatedAt).toISOString() : null,
+                            consumer_init: row.ConsumerInit && !isNaN(Date.parse(row.ConsumerInit)) ? new Date(row.ConsumerInit).toISOString() : null,
+                            consumer_finish: row.ConsumerFinish && !isNaN(Date.parse(row.ConsumerFinish)) ? new Date(row.ConsumerFinish).toISOString() : null,
+                            created_at: row.createdAt && !isNaN(Date.parse(row.createdAt)) ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+                            updated_at: row.updatedAt && !isNaN(Date.parse(row.updatedAt)) ? new Date(row.updatedAt).toISOString() : null,
                             evaluated_skills,
                             assessed_skills,
                             extra_fields
@@ -147,12 +147,16 @@ export default function AdminUploadPage() {
         if (file) handleFileUpload(file);
     }, []);
 
-    if (loading || (!user || cargo !== 'admin')) {
+    if (loading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-white">
                 <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent-red border-t-transparent"></div>
             </div>
         );
+    }
+
+    if (!user || cargo !== 'admin') {
+        return null;
     }
 
     return (
@@ -227,7 +231,7 @@ export default function AdminUploadPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200/30 bg-transparent">
-                                        <tr><td className="p-3 font-mono text-dark-gray">internal_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID originial da redação</td></tr>
+                                        <tr><td className="p-3 font-mono text-dark-gray">internal_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID original da redação</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">task_id / answer_id / question_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">IDs de controle e origem</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">external_id</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">ID externo (ex: plataforma parceira)</td></tr>
                                         <tr><td className="p-3 font-mono text-dark-gray">nick</td><td className="p-3 text-gray-500">Texto</td><td className="p-3 text-gray-600">Apelido do aluno</td></tr>
