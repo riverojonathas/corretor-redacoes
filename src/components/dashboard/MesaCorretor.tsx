@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Redacao, RedacaoListItem, Highlight, Criterio } from '@/types/dashboard';
 import { sanitizeTextWithHighlights } from '@/lib/textUtils';
 import { useCorrectionState } from '@/hooks/useCorrectionState';
+import { useRedacoesList } from '@/hooks/useRedacoesList';
 import { RedacaoList } from './RedacaoList';
 import { CorrectionHeader } from './CorrectionHeader';
 import { FloatingToolbar, FixedToolbar } from './HighlightTools';
@@ -41,8 +42,16 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     // ── View State ──────────────────────────────────────────
     const [view, setView] = useState<'list' | 'correction'>('list');
-    const [listaRedacoes, setListaRedacoes] = useState<RedacaoListItem[]>([]);
-    const [loadingLista, setLoadingLista] = useState(true);
+
+    // ── Lista com filtros server-side (hook) ────────────────
+    const {
+        lista: listaRedacoes,
+        loading: loadingLista,
+        hasMore,
+        filters,
+        setFilters,
+        loadMore,
+    } = useRedacoesList(user?.id);
 
     // ── Correction State ────────────────────────────────────
     const [redacao, setRedacao] = useState<Redacao | null>(null);
@@ -116,51 +125,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         }
     }, [isDirty, initialAnswerId, router]);
 
-    // ── Fetch Lista ─────────────────────────────────────────
-    const fetchLista = useCallback(async () => {
-        if (!user) return;
-        setLoadingLista(true);
-        try {
-            const { data: redacoes, error } = await supabase
-                .from('redacoes')
-                .select('id, title, nick, extra_fields, answer_id, revisoes(id, corretor_id, favorita, status)')
-                .order('created_at', { ascending: false });
-            if (error) throw error;
-            if (redacoes) {
-                const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
-                    const rev = r.revisoes?.find((rev: any) => rev.corretor_id === user.id);
-                    const extras = r.extra_fields || {};
-                    return {
-                        id: r.id,
-                        titulo: r.title || 'Sem Título',
-                        nick: r.nick,
-                        nr_serie: extras.redacao_ano_serie,
-                        titulo_modelo: extras.redacao_tema,
-                        nm_tipo_ensino: extras.nm_tipo_ensino,
-                        answer_id: r.answer_id,
-                        status: rev ? (rev.status || 'concluida') : 'pendente',
-                        revisao_id: rev?.id,
-                        favorita: rev?.favorita || false
-                    };
-                });
-                setListaRedacoes(formatadas);
-            }
-        } catch (err) {
-            console.error('Erro ao buscar lista:', err);
-        } finally {
-            setLoadingLista(false);
-        }
-    }, [user]);
-
+    // ── Inicialização: se tem answer_id direto, vai pra correção ─
     useEffect(() => {
         if (!user) return;
         if (initialAnswerId) {
             setView('correction');
             loadInitialAnswer(initialAnswerId);
-        } else if (view === 'list') {
-            fetchLista();
         }
-    }, [view, fetchLista, initialAnswerId, user]);
+    }, [initialAnswerId, user]);
 
     const loadInitialAnswer = async (answerId: string) => {
         setLoadingRedacao(true);
@@ -494,8 +466,12 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     if (view === 'list') {
         return (
             <RedacaoList
-                listaRedacoes={listaRedacoes}
-                loadingLista={loadingLista}
+                lista={listaRedacoes}
+                loading={loadingLista}
+                hasMore={hasMore}
+                filters={filters}
+                onFilterChange={setFilters}
+                onLoadMore={loadMore}
                 initialAnswerId={initialAnswerId}
                 notFoundError={notFoundError}
                 onSelectRedacao={handleSelectRedacao}
