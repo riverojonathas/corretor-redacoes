@@ -41,8 +41,8 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12 sm:px-6 lg:px-8">
-            <div className="w-full max-w-md space-y-8 bg-white p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100/60">
+        <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12 sm:px-6 lg:px-8">
+            <div className="w-full max-w-md space-y-8 bg-white/40 p-10 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-200/50 backdrop-blur-sm">
                 <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-accent-red/10 flex items-center justify-center rounded-2xl mb-4">
                         <svg className="w-8 h-8 text-accent-red" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -52,7 +52,7 @@ export default function LoginPage() {
                     <h2 className="text-center text-3xl font-bold tracking-tight text-dark-gray">
                         Acesso Restrito
                     </h2>
-                    <p className="mt-2 text-center text-sm font-medium text-gray-400">
+                    <p className="mt-2 text-center text-sm font-medium text-gray-500">
                         Plataforma de Correção de Redações
                     </p>
                 </div>
@@ -77,7 +77,7 @@ export default function LoginPage() {
                                 autoComplete="email"
                                 required
                                 autoFocus
-                                className="block w-full rounded-xl border border-gray-200 px-4 py-3.5 text-dark-gray placeholder-gray-400 focus:border-accent-red focus:outline-none focus:ring-4 focus:ring-accent-red/10 transition-all text-sm font-medium bg-gray-50/50"
+                                className="block w-full rounded-xl border border-gray-200/50 px-4 py-3.5 text-dark-gray placeholder-gray-400 focus:border-accent-red focus:outline-none focus:ring-4 focus:ring-accent-red/10 transition-all text-sm font-medium bg-white/40"
                                 placeholder="exemplo@email.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}

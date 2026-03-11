@@ -42,9 +42,9 @@ export default function AjudaPage() {
 
     return (
         <DashboardLayout>
-            <div className="flex flex-col h-full bg-[#FAFAFA]">
+            <div className="flex flex-col h-full bg-background">
                 {/* Header Section */}
-                <div className="bg-white border-b border-gray-100 px-8 py-10 lg:px-12 sticky top-0 z-10 w-full shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                <div className="bg-white/40 border-b border-[#eee9df] px-8 py-10 lg:px-12 sticky top-0 z-10 w-full shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6 backdrop-blur-md">
                     <div className="max-w-6xl mx-auto md:mx-0 flex items-center gap-4">
                         <div className="w-12 h-12 bg-accent-red rounded-2xl flex items-center justify-center text-white shadow-lg shadow-accent-red/20 shrink-0">
                             <Sparkles size={24} />
@@ -92,7 +92,7 @@ export default function AjudaPage() {
                                         return (
                                             <div
                                                 key={feature.id}
-                                                className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer flex flex-col h-full"
+                                                className="bg-white/40 p-6 rounded-3xl border border-gray-200/50 shadow-sm hover:shadow-md transition-all duration-300 group cursor-pointer flex flex-col h-full"
                                             >
                                                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center mb-5 border", feature.colorClass)}>
                                                     <IconComponent size={24} />
@@ -103,7 +103,7 @@ export default function AjudaPage() {
                                                 </p>
 
                                                 {/* Hidden detailed text that expands or can be used for a modal later */}
-                                                <div className="mt-4 pt-4 border-t border-gray-50 text-xs text-gray-400 font-medium">
+                                                <div className="mt-4 pt-4 border-t border-gray-50 text-xs text-gray-500 font-medium">
                                                     Clique para saber mais (Em breve)
                                                 </div>
                                             </div>
@@ -115,7 +115,7 @@ export default function AjudaPage() {
 
                         {/* RIGHT COLUMN: Releases (Timeline) */}
                         <div className="lg:col-span-5">
-                            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-gray-100 shadow-sm sticky top-32">
+                            <div className="bg-white/40 rounded-3xl p-6 sm:p-8 border border-gray-200/50 shadow-sm sticky top-32">
                                 <h2 className="text-xl font-bold text-dark-gray mb-2">Últimas Atualizações</h2>
                                 <p className="text-sm text-gray-500 mb-8 font-medium">O que rolou de novo no sistema.</p>
 
@@ -143,7 +143,7 @@ export default function AjudaPage() {
                                                         <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit", style.bg, style.text)}>
                                                             {style.label}
                                                         </span>
-                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{release.date}</span>
+                                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{release.date}</span>
                                                     </div>
 
                                                     <h3 className="text-base font-bold text-dark-gray mb-1.5 flex items-center gap-2">

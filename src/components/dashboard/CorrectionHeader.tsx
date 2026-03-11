@@ -58,18 +58,18 @@ export function CorrectionHeader({
             {/* Linha 1: Metadados da Redação e Ferramentas */}
             <div className="flex items-center justify-between px-8 py-3 border-b border-gray-100/30 flex-wrap gap-4">
                 <div className="flex items-center gap-5">
-                    <div className="flex items-center gap-3 text-gray-400">
+                    <div className="flex items-center gap-3 text-gray-500">
                         <UserIcon size={14} />
                         <span className="text-[11px] font-bold uppercase tracking-widest text-dark-gray">{redacao.nick}</span>
                         <span className="text-gray-200">|</span>
-                        <span className="text-[11px] font-medium">{redacao.extra_fields?.redacao_ano_serie}</span>
+                        <span className="text-[11px] font-medium text-gray-500">{redacao.extra_fields?.redacao_ano_serie}</span>
                     </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 bg-gray-50 border border-gray-200 rounded-lg p-0.5">
-                        <div className="flex items-center gap-1 px-2 border-r border-gray-100">
-                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Filtro:</span>
+                    <div className="flex items-center gap-1.5 bg-black/5 border border-[#eee9df] rounded-lg p-0.5">
+                        <div className="flex items-center gap-1 px-2 border-r border-[#eee9df]">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Filtro:</span>
                             <select
                                 className="bg-transparent text-[10px] font-bold text-gray-600 outline-none cursor-pointer"
                                 value={filterHighlightCriterio}
@@ -83,9 +83,9 @@ export function CorrectionHeader({
                             onClick={() => setReadMode(!readMode)}
                             className={cn(
                                 "flex items-center gap-1.5 px-2.5 py-1.5 text-[9px] font-bold transition-all uppercase rounded-md",
-                                readMode 
-                                    ? "bg-white text-blue-600 shadow-sm border border-gray-200" 
-                                    : "text-gray-500 hover:text-dark-gray"
+                                readMode
+                                    ? "bg-[#fdfaf2] text-accent-red shadow-sm border border-[#eee9df]"
+                                    : "text-gray-500 hover:text-dark-gray hover:bg-[#fdfaf2]/50"
                             )}
                         >
                             {readMode ? <EyeOff size={11} /> : <Eye size={11} />}
@@ -102,8 +102,8 @@ export function CorrectionHeader({
                             className={cn(
                                 "flex items-center gap-1.5 px-2.5 py-1.5 text-[9px] font-bold transition-all uppercase rounded-md",
                                 toolbarMode === 'fixed'
-                                    ? "bg-white text-dark-gray shadow-sm border border-gray-200"
-                                    : "text-gray-500 hover:text-dark-gray"
+                                    ? "bg-[#fdfaf2] text-dark-gray shadow-sm border border-[#eee9df]"
+                                    : "text-gray-500 hover:text-dark-gray hover:bg-[#fdfaf2]/50"
                             )}
                         >
                             {toolbarMode === 'floating' ? <Pin size={11} /> : <PinOff size={11} />}
@@ -123,12 +123,12 @@ export function CorrectionHeader({
                     <button
                         type="button"
                         onClick={() => setFavorita(!favorita)}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-colors ${favorita
-                            ? 'bg-yellow-50 text-yellow-600 border border-yellow-200'
-                            : 'bg-white text-gray-400 border border-gray-200 hover:bg-yellow-50 hover:text-yellow-600'
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-wider transition-colors border ${favorita
+                            ? 'bg-amber-50 text-amber-600 border-amber-200'
+                            : 'bg-black/5 text-gray-500 border-[#eee9df] hover:bg-amber-50/50 hover:text-amber-600'
                             }`}
                     >
-                        <Star size={10} className={favorita ? 'fill-yellow-500 text-yellow-500' : ''} />
+                        <Star size={10} className={favorita ? 'fill-amber-500 text-amber-500' : ''} />
                         {favorita ? 'Favorita' : 'Favoritar'}
                     </button>
                 </div>
@@ -144,16 +144,16 @@ export function CorrectionHeader({
                                 activeCriterio === c.id
                                     ? "bg-[#fdfaf2] text-dark-gray shadow-sm border border-gray-200/50 ring-1 ring-inset ring-gray-100"
                                     : "text-gray-500 hover:text-dark-gray hover:bg-white/50",
-                                getCriterioStatus(c.id) === 'complete' && activeCriterio !== c.id && "text-green-600 bg-green-50/30",
-                                getCriterioStatus(c.id) === 'complete' && activeCriterio === c.id && "ring-green-200/50 text-green-700",
-                                getCriterioStatus(c.id) === 'partial' && activeCriterio !== c.id && "text-yellow-600 bg-yellow-50/30",
-                                getCriterioStatus(c.id) === 'partial' && activeCriterio === c.id && "ring-yellow-200/50 text-yellow-700"
+                                getCriterioStatus(c.id) === 'complete' && activeCriterio !== c.id && "text-emerald-600 bg-emerald-500/5",
+                                getCriterioStatus(c.id) === 'complete' && activeCriterio === c.id && "ring-emerald-200/50 text-emerald-700 bg-emerald-500/10",
+                                getCriterioStatus(c.id) === 'partial' && activeCriterio !== c.id && "text-amber-600 bg-amber-500/5",
+                                getCriterioStatus(c.id) === 'partial' && activeCriterio === c.id && "ring-amber-200/50 text-amber-700 bg-amber-500/10"
                             )}
                         >
                             <div className="flex items-center justify-center gap-1.5">
                                 Critério {c.id}
-                                {getCriterioStatus(c.id) === 'complete' && <CheckCircle2 size={12} className="text-green-500 shrink-0" />}
-                                {getCriterioStatus(c.id) === 'partial' && <AlertCircle size={12} className="text-yellow-500 shrink-0" />}
+                                {getCriterioStatus(c.id) === 'complete' && <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />}
+                                {getCriterioStatus(c.id) === 'partial' && <AlertCircle size={12} className="text-amber-500 shrink-0" />}
                             </div>
                         </button>
                     ))}

@@ -85,7 +85,7 @@ export function Topbar() {
             <div className="flex items-center gap-4 sm:gap-6">
                 <button
                     onClick={() => setPrimeiroAcesso(true)}
-                    className="p-2 text-gray-400 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center focus:outline-none"
+                    className="p-2 text-gray-500 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors flex items-center justify-center focus:outline-none"
                     title="Ajuda / Tutorial"
                     aria-label="Reabrir tutorial"
                 >
@@ -104,7 +104,7 @@ export function Topbar() {
                             <p className="text-xs font-semibold text-dark-gray leading-none">
                                 {nome ? nome.split(' ')[0] : (user?.email?.split('@')[0] || 'Usuário')}
                             </p>
-                            <p className="text-[10px] text-gray-400 uppercase tracking-wider mt-1">
+                            <p className="text-[10px] text-gray-500 uppercase tracking-wider mt-1">
                                 {cargo || 'Membro'}
                             </p>
                         </div>
@@ -115,7 +115,7 @@ export function Topbar() {
                                 <User size={16} />
                             )}
                         </div>
-                        <ChevronDown size={14} className={`text-gray-400 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={14} className={`text-gray-500 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                     </button>
 
                     {/* Dropdown Menu */}
@@ -125,7 +125,7 @@ export function Topbar() {
                                 <p className="text-xs font-semibold text-dark-gray truncate">
                                     {nome || user?.email}
                                 </p>
-                                <p className="text-[10px] text-gray-400 uppercase mt-0.5">
+                                <p className="text-[10px] text-gray-500 uppercase mt-0.5">
                                     {cargo || 'Membro'}
                                 </p>
                             </div>

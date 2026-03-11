@@ -19,9 +19,10 @@ O componente central da Mesa do Corretor foi completamente reestruturado para ga
 - **Performance do IDE**: Redução drástica no tamanho do arquivo principal, eliminando travamentos durante o desenvolvimento.
 - **Builds Otimizados**: A nova estrutura modular contribui para tempos de build mais previsíveis e menor carga de processamento.
 
-### 🎨 Conforto Visual e Limpeza de Dados
-A interface e o processamento de texto foram elevados para um padrão premium.
-- **Tema Sépia (Modo Papel)**: Implementamos um fundo levemente amarelado (`#fdfaf2`) e fontes serifadas para o texto da redação, reduzindo a fadiga visual durante revisões extensas.
+### 🎨 Conforto Visual e Limpeza de Dados (Global)
+A interface e o processamento de texto foram elevados para um padrão premium em todo o sistema.
+- **Tema Sépia Global**: Extendemos o tom amarelado confortável (`#fdfaf2`) para todas as páginas do sistema, incluindo Dashboard, Sidebar, Topbar, Configurações e toda a área administrativa.
+- **Camadas de Profundidade**: Utilizamos cartões semi-transparentes sobre o fundo sépia para criar uma interface moderna, limpa e que foca no que importa: a leitura.
 - **Sanitização Inteligente de Texto**: O sistema agora remove sequências literais de escape (`\n`, `\t`, `\r`) que poluíam o texto original e os comentários da IA.
 - **Preservação de Grifos**: Nossa tecnologia exclusiva ajusta automaticamente os índices dos destaques (marca-texto) após a limpeza do texto, garantindo que nenhum grifo saia do lugar.
 - **Título Realista**: O título da redação agora aparece centralizado e destacado no topo do texto, simulando a folha de redação oficial.

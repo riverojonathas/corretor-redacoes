@@ -144,7 +144,7 @@ export function WelcomePopup({ onClose }: WelcomePopupProps) {
                                     <div className="w-px h-6 bg-gray-200 mx-2"></div>
                                     <p className="text-xs text-gray-600 font-medium">Selecione texto para grifar e opcionalmente adicione uma observação.</p>
                                 </div>
-                                <p className="text-xs text-center text-gray-400 mt-4 leading-relaxed px-4">
+                                <p className="text-xs text-center text-gray-500 mt-4 leading-relaxed px-4">
                                     Os grifos podem ser feitos tanto no texto original do aluno quanto na devolutiva da IA. Basta selecionar a palavra ou frase na tela de correção.
                                 </p>
                             </div>

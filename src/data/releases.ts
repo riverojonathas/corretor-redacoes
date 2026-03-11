@@ -55,6 +55,14 @@ export const EXAMPLES_FEATURES: FeaturePill[] = [
 
 export const EXAMPLES_RELEASES: ReleaseNote[] = [
     {
+        id: 'v1.1',
+        version: 'v1.1',
+        date: 'Março 2026',
+        title: 'Refinamento UI/UX e Tema Sépia Global',
+        description: 'Implementação do tema sépia em todo o sistema, nova seção de avaliação final com sanfona automática e melhorias de contraste e acessibilidade.',
+        category: 'melhoria'
+    },
+    {
         id: 'v1.0',
         version: 'v1.0',
         date: 'Março 2026',

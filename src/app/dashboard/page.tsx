@@ -106,7 +106,7 @@ export default function DashboardPage() {
                             <FileText size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Total de Redações</p>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Total de Redações</p>
                             <p className="text-2xl font-bold text-dark-gray">
                                 {loadingStats ? '...' : stats?.totalRedacoes || 0}
                             </p>
@@ -118,7 +118,7 @@ export default function DashboardPage() {
                             <BookOpen size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Modelos Disponíveis</p>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Modelos Disponíveis</p>
                             <p className="text-2xl font-bold text-dark-gray">
                                 {loadingStats ? '...' : stats?.totalModelos || 0}
                             </p>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                             <CheckCircle2 size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Revisões Feitas</p>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Revisões Feitas</p>
                             <p className="text-2xl font-bold text-dark-gray">
                                 {loadingStats ? '...' : stats?.totalRevisoes || 0}
                             </p>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
                             <BarChart3 size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Nota Média Geral</p>
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Nota Média Geral</p>
                             <p className="text-2xl font-bold text-dark-gray">
                                 {loadingStats ? '...' : stats?.notaMediaGeral || 0}
                             </p>
@@ -157,14 +157,14 @@ export default function DashboardPage() {
                         <h2 className="text-xl font-bold text-dark-gray mb-6">Ações Rápidas</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
                             {/* Ações para Corretores (Visualizado por todos) */}
-                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-200/40 bg-white/40 hover:border-accent-red hover:bg-accent-red/5 transition-all group h-full">
-                                <FileText className="text-gray-400 group-hover:text-accent-red mb-3 transition-colors shrink-0" size={24} />
+                            <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-200/40 bg-white/40 hover:border-accent-red/30 hover:bg-accent-red/5 hover:shadow-md transition-all group h-full">
+                                <FileText className="text-gray-500 group-hover:text-accent-red mb-3 transition-colors shrink-0" size={24} />
                                 <span className="font-semibold text-dark-gray">Birô de Revisão</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para analisar textos e atribuir notas finais às redações pendentes.</span>
                             </button>
 
-                            <button onClick={() => router.push('/ajuda')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-emerald-600 hover:bg-emerald-50 transition-all group h-full">
-                                <HelpCircle className="text-gray-400 group-hover:text-emerald-600 mb-3 transition-colors shrink-0" size={24} />
+                            <button onClick={() => router.push('/ajuda')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-emerald-600/30 hover:bg-emerald-50 hover:shadow-md transition-all group h-full">
+                                <HelpCircle className="text-gray-500 group-hover:text-emerald-600 mb-3 transition-colors shrink-0" size={24} />
                                 <span className="font-semibold text-dark-gray">Central de Ajuda</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Ficou com dúvida nas ferramentas? Clicando aqui você também tem as últimas novidades.</span>
                             </button>
@@ -172,14 +172,14 @@ export default function DashboardPage() {
                             {/* Ações Específicas de Administrador */}
                             {cargo === 'admin' && (
                                 <>
-                                    <button onClick={() => router.push('/admin/upload')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-purple-600 hover:bg-purple-50 transition-all group h-full">
-                                        <Upload className="text-gray-400 group-hover:text-purple-600 mb-3 transition-colors shrink-0" size={24} />
+                                    <button onClick={() => router.push('/admin/upload')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-purple-600/30 hover:bg-purple-50 hover:shadow-md transition-all group h-full">
+                                        <Upload className="text-gray-500 group-hover:text-purple-600 mb-3 transition-colors shrink-0" size={24} />
                                         <span className="font-semibold text-dark-gray">Upload de Textos</span>
                                         <span className="text-xs text-gray-500 mt-1 text-left">Adicione novos lotes de redação (já pré-avaliados pela IA) subindo um arquivo CSV estruturado.</span>
                                     </button>
 
-                                    <button onClick={() => router.push('/admin/feedbacks')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-blue-600 hover:bg-blue-50 transition-all group h-full">
-                                        <Inbox className="text-gray-400 group-hover:text-blue-600 mb-3 transition-colors shrink-0" size={24} />
+                                    <button onClick={() => router.push('/admin/feedbacks')} className="flex flex-col items-start p-5 rounded-xl border border-gray-100 hover:border-blue-600/30 hover:bg-blue-50 hover:shadow-md transition-all group h-full">
+                                        <Inbox className="text-gray-500 group-hover:text-blue-600 mb-3 transition-colors shrink-0" size={24} />
                                         <span className="font-semibold text-dark-gray">Ver Feedback UI/UX</span>
                                         <span className="text-xs text-gray-500 mt-1 text-left">Caixa de entrada com logs de Bugs reportados pela equipe e propostas de funcionalidades.</span>
                                     </button>

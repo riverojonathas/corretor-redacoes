@@ -106,7 +106,7 @@ export function ProfileSettings() {
                 <p className="text-sm text-gray-500">Gerencie sua identidade pública no Corretor.</p>
             </div>
 
-            <div className="bg-white p-6 sm:p-8 rounded-2xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-10">
+            <div className="bg-white/40 p-6 sm:p-8 rounded-2xl border border-gray-200/50 shadow-sm flex flex-col md:flex-row gap-10">
 
                 {/* Lado Esquerdo: Avatar */}
                 <div className="flex flex-col items-center gap-4">
@@ -154,7 +154,7 @@ export function ProfileSettings() {
                 <div className="flex-1">
                     <form onSubmit={handleSaveInfo} className="space-y-5 max-w-md">
                         <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                 Nome de Exibição
                             </label>
                             <input
@@ -162,25 +162,25 @@ export function ProfileSettings() {
                                 value={editNome}
                                 onChange={(e) => setEditNome(e.target.value)}
                                 required
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-400 font-medium"
+                                className="w-full bg-white/40 border border-gray-200/50 rounded-xl px-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-500 font-medium"
                                 placeholder="Seu nome..."
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
-                                E-mail da Conta <span className="text-[10px] text-gray-400 font-normal lowercase tracking-normal ml-1">(não modificável)</span>
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                                E-mail da Conta <span className="text-[10px] text-gray-500 font-normal lowercase tracking-normal ml-1">(não modificável)</span>
                             </label>
                             <input
                                 type="email"
                                 value={user?.email || ''}
                                 disabled
-                                className="w-full bg-gray-100/50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-400 outline-none cursor-not-allowed"
+                                className="w-full bg-gray-100/50 border border-gray-100 rounded-xl px-4 py-3 text-sm text-gray-500 outline-none cursor-not-allowed"
                             />
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                                 Cargo / Nível
                             </label>
                             <div className="inline-flex bg-accent-red/5 text-accent-red border border-accent-red/10 px-4 py-2 rounded-lg text-sm font-bold capitalize">

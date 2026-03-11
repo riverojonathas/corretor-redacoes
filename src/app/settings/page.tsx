@@ -48,7 +48,7 @@ export default function SettingsPage() {
                                         "flex flex-1 items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all whitespace-nowrap",
                                         isActive
                                             ? "bg-dark-gray text-white shadow-lg shadow-dark-gray/10"
-                                            : "hover:bg-gray-100/80 text-gray-500 hover:text-dark-gray"
+                                            : "hover:bg-white/40 text-gray-500 hover:text-dark-gray"
                                     )}
                                 >
                                     <Icon size={18} className={isActive ? "text-accent-red" : ""} />

@@ -67,7 +67,7 @@ export default function AdminFeedbacksPage() {
     if (authLoading || cargo !== 'admin') {
         return (
             <DashboardLayout>
-                <div className="flex items-center justify-center p-20 text-gray-400 gap-2">
+                <div className="flex items-center justify-center p-20 text-gray-500 gap-2">
                     <ShieldAlert size={20} className="animate-pulse" />
                     <span>Verificando permissões...</span>
                 </div>
@@ -91,30 +91,30 @@ export default function AdminFeedbacksPage() {
                 </div>
 
                 {/* Table */}
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="bg-white/40 rounded-2xl border border-gray-200/50 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto custom-scrollbar">
                         <table className="w-full text-left border-collapse">
                             <thead>
-                                <tr className="bg-gray-50/50 border-b border-gray-100/80">
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider w-1/4">Enviado por</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider w-1/6">Tipo</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider w-1/3">Mensagem</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider w-1/6">Data</th>
-                                    <th className="py-4 px-6 text-xs font-bold text-gray-400 uppercase tracking-wider w-1/6 text-right">Status</th>
+                                <tr className="bg-white/30 border-b border-gray-200/40">
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/4">Enviado por</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/6">Tipo</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/3">Mensagem</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/6">Data</th>
+                                    <th className="py-4 px-6 text-xs font-bold text-gray-500 uppercase tracking-wider w-1/6 text-right">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center text-gray-400">Carregando mensagens...</td>
+                                        <td colSpan={5} className="py-12 text-center text-gray-500">Carregando mensagens...</td>
                                     </tr>
                                 ) : feedbacks.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="py-12 text-center text-gray-400">Sua caixa de entrada está vazia.</td>
+                                        <td colSpan={5} className="py-12 text-center text-gray-500">Sua caixa de entrada está vazia.</td>
                                     </tr>
                                 ) : (
                                     feedbacks.map((f) => (
-                                        <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                                        <tr key={f.id} className="border-b border-gray-200/30 hover:bg-black/5 transition-colors">
                                             {/* Usuário */}
                                             <td className="py-4 px-6 align-top">
                                                 <div className="flex items-center gap-3">
@@ -122,14 +122,14 @@ export default function AdminFeedbacksPage() {
                                                         {f.perfis?.avatar_url ? (
                                                             <img src={f.perfis.avatar_url} alt="" className="w-full h-full object-cover" />
                                                         ) : (
-                                                            <span className="text-xs font-bold text-gray-400 uppercase">
+                                                            <span className="text-xs font-bold text-gray-500 uppercase">
                                                                 {f.perfis?.nome?.charAt(0) || '?'}
                                                             </span>
                                                         )}
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-dark-gray text-sm">{f.perfis?.nome || 'Usuário Desconhecido'}</p>
-                                                        <p className="text-xs text-gray-400">{f.perfis?.cargo || '-'}</p>
+                                                        <p className="text-xs text-gray-500">{f.perfis?.cargo || '-'}</p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -149,7 +149,7 @@ export default function AdminFeedbacksPage() {
                                             </td>
 
                                             {/* Data */}
-                                            <td className="py-4 px-6 align-top text-xs text-gray-400 font-medium">
+                                            <td className="py-4 px-6 align-top text-xs text-gray-500 font-medium">
                                                 {format(new Date(f.created_at), "dd MMM, HH:mm", { locale: ptBR })}
                                             </td>
 

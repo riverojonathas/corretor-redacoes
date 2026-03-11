@@ -45,7 +45,7 @@ export function Sidebar() {
                                 "p-2 rounded-lg transition-all duration-200 group relative",
                                 isActive
                                     ? "bg-accent-red text-white shadow-sm"
-                                    : "text-gray-400 hover:text-dark-gray hover:bg-black/5"
+                                    : "text-gray-500 hover:text-dark-gray hover:bg-black/5"
                             )}
                         >
                             <item.icon size={20} />
@@ -62,7 +62,7 @@ export function Sidebar() {
             <div className="mt-auto">
                 <button
                     onClick={() => signOut()}
-                    className="p-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-50 transition-all duration-200"
+                    className="p-2 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-50 transition-all duration-200"
                     title="Sair"
                 >
                     <LogOut size={20} />

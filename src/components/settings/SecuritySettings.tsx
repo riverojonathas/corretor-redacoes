@@ -49,37 +49,37 @@ export function SecuritySettings() {
                 <p className="text-sm text-gray-500">Mantenha sua conta protegida com uma senha forte.</p>
             </div>
 
-            <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+            <div className="bg-white/40 p-6 rounded-2xl border border-gray-200/50 shadow-sm">
                 <form onSubmit={handleUpdatePassword} className="space-y-4 max-w-md">
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                             Nova Senha
                         </label>
                         <div className="relative">
-                            <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input
                                 type="password"
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-400"
+                                className="w-full bg-white/40 border border-gray-200/50 rounded-xl pl-10 pr-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-500"
                                 placeholder={"••••••••"}
                             />
                         </div>
                     </div>
 
                     <div>
-                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
                             Confirmar Nova Senha
                         </label>
                         <div className="relative">
-                            <ShieldCheck size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                            <ShieldCheck size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                             <input
                                 type="password"
                                 required
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-400"
+                                className="w-full bg-white/40 border border-gray-200/50 rounded-xl pl-10 pr-4 py-3 text-sm text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all placeholder:text-gray-500"
                                 placeholder={"••••••••"}
                             />
                         </div>

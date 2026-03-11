@@ -185,12 +185,12 @@ export function RedacaoList({
 
                                     <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">
                                         <span className="flex items-center gap-1.5 text-gray-600 font-bold bg-black/5 px-2 py-0.5 rounded">
-                                            <UserIcon size={14} className="text-gray-400" />
+                                            <UserIcon size={14} className="text-gray-500" />
                                             {item.nick}
                                         </span>
                                         <span className="text-gray-300">•</span>
                                         <span className="flex items-center gap-1.5 text-gray-600 font-medium">
-                                            <GraduationCap size={14} className="text-gray-400" />
+                                            <GraduationCap size={14} className="text-gray-500" />
                                             {item.nm_tipo_ensino && `${item.nm_tipo_ensino} - `}{item.nr_serie}
                                         </span>
                                     </div>

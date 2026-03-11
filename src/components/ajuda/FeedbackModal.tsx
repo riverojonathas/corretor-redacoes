@@ -81,7 +81,7 @@ export function FeedbackModal({ isOpen, onClose, initialType = 'sugestao' }: Fee
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 text-gray-400 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors self-start"
+                        className="p-2 text-gray-500 hover:text-dark-gray hover:bg-gray-100 rounded-full transition-colors self-start"
                     >
                         <X size={20} />
                     </button>

@@ -55,7 +55,7 @@ export function FloatingToolbar({
                 <Move size={14} className="text-gray-300 group-hover:text-gray-500 transition-colors" />
                 <Highlighter className="text-red-500" size={16} />
                 <h4 className="text-sm font-bold text-dark-gray">Criar Destaque Visual</h4>
-                <button type="button" onClick={onClose} className="ml-auto text-gray-400 hover:text-gray-600">
+                <button type="button" onClick={onClose} className="ml-auto text-gray-500 hover:text-gray-600">
                     <X size={16} />
                 </button>
             </div>
@@ -64,7 +64,7 @@ export function FloatingToolbar({
                 <div className="grid grid-cols-2 gap-3">
                     {target === 'texto' && (
                         <div>
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Critério Ref.</label>
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Critério Ref.</label>
                             <select
                                 required
                                 value={formData.criterio_id}
@@ -76,7 +76,7 @@ export function FloatingToolbar({
                         </div>
                     )}
                     <div className={cn(target !== 'texto' && "col-span-2")}>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cor</label>
+                        <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Cor</label>
                         <select
                             required
                             value={formData.cor}
@@ -91,7 +91,7 @@ export function FloatingToolbar({
                 </div>
 
                 <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Observação</label>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Observação</label>
                     <textarea
                         rows={2}
                         value={formData.observacao}
@@ -130,7 +130,7 @@ export function FixedToolbar({
                 : "bg-gray-50 border-gray-200 opacity-60 grayscale-[50%] pointer-events-none"
         )}>
             <div className="flex items-center gap-2 mb-3">
-                <Highlighter size={16} className={visible ? "text-red-500" : "text-gray-400"} />
+                <Highlighter size={16} className={visible ? "text-red-500" : "text-gray-500"} />
                 <span className="text-sm font-bold text-dark-gray">
                     {visible ? "Texto Selecionado: Adicionar Destaque" : "Selecione um texto para grifar..."}
                 </span>

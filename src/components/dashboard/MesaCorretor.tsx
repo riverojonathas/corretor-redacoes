@@ -143,7 +143,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         if (currentDataStr !== pristineDataStr) return true;
 
         if (highlights.length !== pristineHighlights.length) return true;
-        
+
         // Simple comparison for highlights
         return JSON.stringify(highlights) !== JSON.stringify(pristineHighlights);
     }, [formData, pristineFormData, highlights, pristineHighlights]);
@@ -186,6 +186,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     // Readability State
     const [readMode, setReadMode] = useState<boolean>(false);
     const [isInfoModalOpen, setIsInfoModalOpen] = useState<boolean>(false);
+    const [openTema, setOpenTema] = useState<Record<number, number | null>>({});
 
     const getCriterioStatus = (criterioId: number) => {
         const t1 = (formData as any)[`criterio_${criterioId}_tema_1`];
@@ -381,10 +382,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                     const cleanSkills = (redacaoData.evaluated_skills || []).map((s: any, idx: number) => {
                         const critId = idx + 1;
                         if (!s.comment) return s;
-                        
+
                         const skillHls = devHighlightsRaw.filter((h: any) => h.criterio_id === critId);
                         const { text: cleanComment, highlights: processedSkillHls } = sanitizeTextWithHighlights(s.comment, skillHls);
-                        
+
                         cleanDevHighlights = [...cleanDevHighlights, ...processedSkillHls];
                         return { ...s, comment: cleanComment };
                     });
@@ -784,7 +785,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                 <div className="flex gap-1 z-50">
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-400 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" aria-label="Editar Destaque">
+                                            <button type="button" onClick={(e) => handleEditHighlight(e, highlights.indexOf(h), h)} className="text-gray-500 hover:text-blue-400 p-1 bg-gray-700/50 rounded hover:bg-blue-500/20" aria-label="Editar Destaque">
                                                 <Highlighter size={12} />
                                             </button>
                                         </TooltipTrigger>
@@ -792,7 +793,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     </Tooltip>
                                     <Tooltip>
                                         <TooltipTrigger asChild>
-                                            <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-400 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" aria-label="Remover Destaque">
+                                            <button type="button" onClick={(e) => handleRemoveHighlight(e, highlights.indexOf(h))} className="text-gray-500 hover:text-red-400 p-1 bg-gray-700/50 rounded hover:bg-red-500/20" aria-label="Remover Destaque">
                                                 <X size={12} />
                                             </button>
                                         </TooltipTrigger>
@@ -800,7 +801,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     </Tooltip>
                                 </div>
                             </span>
-                            <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-400">Sem observação.</i>}</span>
+                            <span className="leading-relaxed font-normal">{h.observacao || <i className="text-gray-500">Sem observação.</i>}</span>
 
                             <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800"></span>
                         </span>
@@ -952,38 +953,39 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         )}
 
                         {/* Título da Redação */}
-                        <div className="mb-12 text-center">
-                            <h1 className="text-3xl font-serif font-bold text-dark-gray mb-2">
+                        <div className="max-w-4xl mx-auto py-12 lg:py-20 px-4 sm:px-8">
+                            <h2 className="text-4xl font-serif font-black text-dark-gray mb-12 text-center leading-tight tracking-tight">
                                 {redacao.title || 'Sem Título'}
-                            </h1>
-                            <div className="w-24 h-1 bg-accent-red/20 mx-auto rounded-full" />
-                        </div>
+                            </h2>
+                            <div className="w-24 h-px bg-accent-red/20 mx-auto mb-16" />
 
-                        <div
-                            ref={textContainerRef}
-                            onMouseUp={handleTextSelection}
-                            className={cn(
-                                "p-4 lg:p-8 text-gray-800 leading-[2.2] text-xl font-serif transition-all",
-                                readMode ? "max-w-4xl mx-auto" : "w-full"
-                            )}
-                            style={{ whiteSpace: 'pre-wrap' }}
-                        >
-                            {renderTextWithHighlights(redacao.essay)}
+                            <div
+                                ref={textContainerRef}
+                                onMouseUp={handleTextSelection}
+                                className={cn(
+                                    "prose prose-slate max-w-none prose-p:leading-[1.8] prose-p:mb-6",
+                                    "text-dark-gray font-serif text-xl sm:text-2xl selection:bg-accent-red/10",
+                                    readMode ? "mx-auto" : "w-full"
+                                )}
+                                style={{ whiteSpace: 'pre-wrap' }}
+                            >
+                                {renderTextWithHighlights(redacao.essay)}
+                            </div>
                         </div>
 
                         {!readMode && (
                             <div className="mt-12 pt-12 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
-                                <div className="flex items-center justify-between bg-white/40 p-5 rounded-3xl border border-gray-200/50 shadow-sm">
+                                <div className="flex items-center justify-between bg-white/20 p-6 rounded-3xl border border-gray-200/50 shadow-sm">
                                     <div className="flex items-center gap-4">
                                         <div className={cn(
                                             "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300",
-                                            formData.suspeita_ia ? "bg-red-100 text-red-600 shadow-inner" : "bg-gray-100 text-gray-400"
+                                            formData.suspeita_ia ? "bg-red-100 text-red-600 shadow-inner" : "bg-gray-100 text-gray-500"
                                         )}>
                                             <AlertCircle size={24} />
                                         </div>
                                         <div>
-                                            <h4 className="text-base font-bold text-dark-gray">Suspeita de uso de IA</h4>
-                                            <p className="text-sm text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
+                                            <h4 className="font-bold text-dark-gray">Suspeita de uso de IA</h4>
+                                            <p className="text-xs text-gray-500">Marque se você acredita que este texto foi gerado por IA.</p>
                                         </div>
                                     </div>
                                     <button
@@ -991,7 +993,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                         onClick={() => setFormData({ ...formData, suspeita_ia: !formData.suspeita_ia })}
                                         className={cn(
                                             "relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none ring-offset-2 focus:ring-2 focus:ring-red-500/20",
-                                            formData.suspeita_ia ? "bg-red-500" : "bg-gray-300"
+                                            formData.suspeita_ia ? "bg-accent-red shadow-lg shadow-accent-red/20" : "bg-gray-300"
                                         )}
                                     >
                                         <span
@@ -1060,10 +1062,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                         {c.name}
                                                     </h3>
                                                     {c.full_desc && (
-                                                        <button 
-                                                            type="button" 
+                                                        <button
+                                                            type="button"
                                                             onClick={() => setIsInfoModalOpen(true)}
-                                                            className="text-gray-400 hover:text-dark-gray focus:outline-none transition-colors"
+                                                            className="text-gray-500 hover:text-dark-gray focus:outline-none transition-colors"
                                                         >
                                                             <HelpCircle size={18} />
                                                         </button>
@@ -1081,7 +1083,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                             <div className="mb-10">
                                                 <div className="flex items-center gap-2 mb-4">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-accent-red" />
-                                                    <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Devolutiva Inteligente</h4>
+                                                    <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Devolutiva Inteligente</h4>
                                                 </div>
                                                 <div
                                                     data-devolutiva="true"
@@ -1098,93 +1100,154 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <div className="w-1.5 h-1.5 rounded-full bg-dark-gray" />
-                                                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em]">Avaliação Final</h4>
+                                                        <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Avaliação Final</h4>
                                                     </div>
 
-                                                    <div className="flex flex-col gap-6">
-                                                        {/* Tema 1 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação de pontos positivos</label>
-                                                            <select
-                                                                required={!submitting}
-                                                                value={(formData as any)[`criterio_${c.id}_tema_1`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_1`]: e.target.value })}
-                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
+                                                    {/* Sanfona Automática de Avaliação */}
+                                                    {(() => {
+                                                        const temas = [
+                                                            { id: 1, label: "Identificação de pontos positivos" },
+                                                            { id: 2, label: "Identificação do problema que levou à perda de nota" },
+                                                            { id: 3, label: "Sugestão de melhoria ao estudante" }
+                                                        ];
+                                                        const correctOptions = ["Satisfatório", "Vago", "Incompleto", "Com erros"];
+                                                        const incorrectOptions = ["Identificou incorretamente", "Não identificou", "Alucinação"];
 
-                                                        {/* Tema 2 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Identificação do problema que levou à perda de nota (quando há perda)</label>
-                                                            <select
-                                                                required={!submitting}
-                                                                value={(formData as any)[`criterio_${c.id}_tema_2`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_2`]: e.target.value })}
-                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
+                                                        // Determine qual tema está aberto para este critério
+                                                        const currentOpenTema = openTema[c.id] !== undefined
+                                                            ? openTema[c.id]
+                                                            : temas.find(t => !(formData as any)[`criterio_${c.id}_tema_${t.id}`])?.id ?? null;
 
-                                                        {/* Tema 3 */}
-                                                        <div>
-                                                            <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5">Sugestão de melhoria ao estudante (quando necessária).</label>
-                                                            <select
-                                                                required={!submitting}
-                                                                value={(formData as any)[`criterio_${c.id}_tema_3`]}
-                                                                onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_tema_3`]: e.target.value })}
-                                                                className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-xl px-4 py-3.5 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all text-dark-gray"
-                                                            >
-                                                                <option value="">Selecione...</option>
-                                                                <optgroup label="Correto">
-                                                                    <option value="Satisfatório">Satisfatório</option>
-                                                                    <option value="Vago">Vago</option>
-                                                                    <option value="Incompleto">Incompleto</option>
-                                                                    <option value="Com erros">Com erros</option>
-                                                                </optgroup>
-                                                                <optgroup label="Incorreto">
-                                                                    <option value="Identificou incorretamente">Identificou incorretamente</option>
-                                                                    <option value="Não identificou">Não identificou</option>
-                                                                    <option value="Alucinação">Alucinação</option>
-                                                                </optgroup>
-                                                            </select>
-                                                        </div>
-                                                    </div>
+                                                        const isNegative = (val: string) => incorrectOptions.includes(val);
 
-                                                    <div className="space-y-3 mt-8">
-                                                        <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider pl-1">
-                                                            Observação do Critério
-                                                        </label>
+                                                        return (
+                                                            <div className="flex flex-col gap-2">
+                                                                {temas.map((tema, idx) => {
+                                                                    const fieldName = `criterio_${c.id}_tema_${tema.id}`;
+                                                                    const currentValue = (formData as any)[fieldName];
+                                                                    const isOpen = currentOpenTema === tema.id;
+                                                                    const isDone = !!currentValue;
+
+                                                                    const handleSelect = (opt: string) => {
+                                                                        const newFormData = { ...formData, [fieldName]: opt };
+                                                                        setFormData(newFormData);
+                                                                        // auto-advance para o próximo não preenchido
+                                                                        const nextTema = temas.find(t => t.id > tema.id && !newFormData[`criterio_${c.id}_tema_${t.id}`]);
+                                                                        setOpenTema(prev => ({ ...prev, [c.id]: nextTema?.id ?? null }));
+                                                                    };
+
+                                                                    return (
+                                                                        <div key={tema.id} className={cn(
+                                                                            "rounded-2xl border transition-all duration-300 overflow-hidden",
+                                                                            isOpen
+                                                                                ? "border-[#eee9df] bg-white/30"
+                                                                                : isDone
+                                                                                    ? "border-transparent bg-transparent"
+                                                                                    : "border-dashed border-[#eee9df]"
+                                                                        )}>
+                                                                            {/* Header do Item */}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setOpenTema(prev => ({ ...prev, [c.id]: isOpen ? null : tema.id }))}
+                                                                                className={cn(
+                                                                                    "w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors",
+                                                                                    isOpen ? "" : isDone ? "hover:bg-black/5" : "hover:bg-black/5"
+                                                                                )}
+                                                                            >
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <span className={cn(
+                                                                                        "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-all",
+                                                                                        isDone
+                                                                                            ? isNegative(currentValue)
+                                                                                                ? "bg-rose-100 text-rose-600"
+                                                                                                : "bg-emerald-100 text-emerald-600"
+                                                                                            : "bg-black/10 text-gray-400"
+                                                                                    )}>
+                                                                                        {isDone
+                                                                                            ? isNegative(currentValue) ? "✕" : "✓"
+                                                                                            : idx + 1
+                                                                                        }
+                                                                                    </span>
+                                                                                    <span className={cn(
+                                                                                        "text-[12px] font-bold uppercase tracking-wide transition-colors",
+                                                                                        isOpen ? "text-dark-gray" : isDone ? "text-gray-500" : "text-gray-400"
+                                                                                    )}>
+                                                                                        {tema.label}
+                                                                                    </span>
+                                                                                </div>
+                                                                                {isDone && !isOpen && (
+                                                                                    <span className={cn(
+                                                                                        "text-[12px] font-bold px-3 py-1 rounded-full border transition-all",
+                                                                                        isNegative(currentValue)
+                                                                                            ? "text-rose-700 bg-rose-50 border-rose-200"
+                                                                                            : "text-emerald-700 bg-emerald-50 border-emerald-200"
+                                                                                    )}>
+                                                                                        {currentValue}
+                                                                                    </span>
+                                                                                )}
+                                                                            </button>
+
+                                                                            {/* Corpo expansível */}
+                                                                            {isOpen && (
+                                                                                <div className="px-5 pb-5 flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                                                    {correctOptions.map(opt => (
+                                                                                        <button
+                                                                                            key={opt}
+                                                                                            type="button"
+                                                                                            onClick={() => handleSelect(opt)}
+                                                                                            className={cn(
+                                                                                                "px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border",
+                                                                                                currentValue === opt
+                                                                                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm"
+                                                                                                    : "bg-transparent text-gray-500 border-[#eee9df] hover:border-emerald-200 hover:text-emerald-600"
+                                                                                            )}
+                                                                                        >
+                                                                                            {opt}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                    <div className="w-px h-4 bg-[#eee9df] mx-1" />
+                                                                                    {incorrectOptions.map(opt => (
+                                                                                        <button
+                                                                                            key={opt}
+                                                                                            type="button"
+                                                                                            onClick={() => handleSelect(opt)}
+                                                                                            className={cn(
+                                                                                                "px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border",
+                                                                                                currentValue === opt
+                                                                                                    ? "bg-rose-50 text-rose-700 border-rose-200 shadow-sm"
+                                                                                                    : "bg-transparent text-gray-500 border-[#eee9df] hover:border-rose-200 hover:text-rose-600"
+                                                                                            )}
+                                                                                        >
+                                                                                            {opt}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        );
+                                                    })()}
+
+                                                    <div className="space-y-4 pt-4 border-t border-[#eee9df]">
+                                                        <div className="flex items-center justify-between px-1">
+                                                            <label className="block text-[11px] font-black text-gray-500 uppercase tracking-[0.15em]">
+                                                                Observação do Critério
+                                                            </label>
+                                                            {(formData as any)[`criterio_${c.id}_observacao`] && (
+                                                                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 animate-in fade-in zoom-in duration-300">
+                                                                    <CheckCircle2 size={12} />
+                                                                    Preenchido
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <textarea
                                                             rows={4}
                                                             value={(formData as any)[`criterio_${c.id}_observacao`]}
                                                             onChange={(e) => setFormData({ ...formData, [`criterio_${c.id}_observacao`]: e.target.value })}
-                                                            placeholder="Descreva pontos positivos e negativos..."
-                                                            className="w-full bg-[#f9f6ef] border border-gray-200/60 rounded-2xl px-5 py-4 text-sm focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all resize-none min-h-[120px]"
+                                                            placeholder="Descreva pontos positivos e negativos observados neste critério..."
+                                                            className="w-full bg-white/40 border border-[#eee9df] rounded-2xl px-5 py-4 text-[15px] focus:ring-4 focus:ring-accent-red/5 focus:border-accent-red/30 outline-none transition-all resize-none min-h-[140px] text-dark-gray placeholder:text-gray-400"
                                                         />
                                                     </div>
                                                 </div>
@@ -1200,10 +1263,10 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
             {/* Barra de Ações Fixa */}
             {!readMode && (
-                <div className="h-20 bg-white border-t border-gray-100 flex items-center justify-between px-8 lg:px-12 shrink-0 z-20 animate-in slide-in-from-bottom-full duration-500">
+                <div className="h-20 bg-[#fdfaf2]/80 backdrop-blur-md border-t border-[#eee9df] flex items-center justify-between px-8 lg:px-12 shrink-0 z-20 animate-in slide-in-from-bottom-full duration-500">
                     <button
                         onClick={() => handleExitMesa()}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-dark-gray transition-colors group"
+                        className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-dark-gray transition-colors group"
                     >
                         <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
                         Sair da Mesa
@@ -1237,19 +1300,19 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             {/* Modal de Informação do Critério */}
             {isInfoModalOpen && criterios.find(crit => crit.id === activeCriterio) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div 
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" 
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
                         onClick={() => setIsInfoModalOpen(false)}
                     />
                     <div className="bg-[#fdfaf2] w-full max-w-2xl rounded-3xl shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300 flex flex-col max-h-[85vh]">
                         <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between shrink-0">
                             <div>
                                 <h3 className="text-xl font-bold text-dark-gray">{criterios.find(crit => crit.id === activeCriterio)?.name}</h3>
-                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">Definição e Critérios de Avaliação</p>
+                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-0.5">Definição e Critérios de Avaliação</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => setIsInfoModalOpen(false)}
-                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-400 hover:text-dark-gray"
+                                className="p-2 hover:bg-black/5 rounded-full transition-colors text-gray-500 hover:text-dark-gray"
                             >
                                 <X size={20} />
                             </button>
@@ -1266,7 +1329,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             </div>
                         </div>
                         <div className="px-8 py-5 bg-gray-50 border-t border-gray-100 flex justify-end shrink-0">
-                            <button 
+                            <button
                                 onClick={() => setIsInfoModalOpen(false)}
                                 className="px-6 py-2.5 bg-dark-gray text-white text-sm font-bold rounded-xl hover:bg-black transition-all"
                             >
@@ -1280,8 +1343,8 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             {/* Modal de Confirmação de Saída (Unsaved Changes) */}
             {showExitConfirm && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-                    <div 
-                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300" 
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
                         onClick={() => setShowExitConfirm(false)}
                     />
                     <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-8 animate-in zoom-in-95 duration-300">
@@ -1291,13 +1354,13 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             </div>
                             <h3 className="text-xl font-bold text-dark-gray text-center">Alterações não salvas!</h3>
                         </div>
-                        
+
                         <p className="text-gray-600 text-sm leading-relaxed mb-8 text-center">
                             Você possui alterações que ainda não foram salvas como rascunho. Se sair agora, o progresso desta sessão será perdido.
                         </p>
 
                         <div className="flex flex-col gap-3">
-                            <button 
+                            <button
                                 onClick={(e) => {
                                     handleSaveRevisao(e, true);
                                     setShowExitConfirm(false);
@@ -1306,15 +1369,15 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             >
                                 Salvar Rascunho e Sair
                             </button>
-                            <button 
+                            <button
                                 onClick={() => handleExitMesa(true)}
                                 className="w-full py-3.5 bg-gray-50 text-gray-500 font-bold rounded-xl hover:bg-gray-100 hover:text-dark-gray transition-all text-sm"
                             >
                                 Sair sem salvar
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setShowExitConfirm(false)}
-                                className="w-full py-3.5 text-gray-400 font-bold hover:text-dark-gray transition-all text-xs"
+                                className="w-full py-3.5 text-gray-500 font-bold hover:text-dark-gray transition-all text-xs"
                             >
                                 Cancelar
                             </button>
