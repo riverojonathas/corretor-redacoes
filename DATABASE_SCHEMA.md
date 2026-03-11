@@ -5,6 +5,9 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 > [!IMPORTANT]
 > Use sempre nomes de colunas em **minúsculas**.
 
+> [!TIP]
+> Os índices de performance documentados na **Seção 5** são obrigatórios para escalar o sistema. Execute o script SQL sempre que criar um novo ambiente (staging, produção).
+
 ## 1. Tabela `perfis`
 *Tabela de Usuários/Corretores*
 
@@ -138,4 +141,54 @@ ALTER TABLE public.feedbacks ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can insert own feedbacks" ON public.feedbacks FOR INSERT WITH CHECK (auth.uid() = user_id);
 -- Admins podem ler todos (assumindo que verificamos cargo no app, ou criando política)
 CREATE POLICY "Admins read all feedbacks" ON public.feedbacks FOR SELECT USING (true); -- Simplificado
+```
+
+---
+
+## 5. Índices de Performance
+*Criados na Fase A do Plano de Performance — Março 2026*
+
+> [!IMPORTANT]
+> Execute este script no **SQL Editor do Supabase** sempre que recriar o banco ou provisionar um novo ambiente. Sem esses índices, queries críticas fazem **full-scan** na tabela.
+
+### Por que cada índice importa
+
+| Índice | Tabela | Coluna | Query beneficiada |
+| :--- | :--- | :--- | :--- |
+| `idx_redacoes_answer_id` | `redacoes` | `answer_id` | Busca de redação ao abrir a Mesa do Corretor |
+| `idx_revisoes_corretor_id` | `revisoes` | `corretor_id` | Lista de revisões feitas por um corretor |
+| `idx_revisoes_redacao_id` | `revisoes` | `redacao_id` | Verificação se já existe revisão para uma redação |
+| `idx_feedbacks_user_id` | `feedbacks` | `user_id` | Busca de chamados do usuário em Configurações |
+| `idx_redacoes_tema` | `redacoes` | `extra_fields->>'redacao_tema'` | Contagem de modelos únicos no Dashboard |
+
+### Script SQL (Fase A)
+
+```sql
+-- Fase A: Índices de Performance
+-- Executar no SQL Editor do Supabase
+
+-- Índice: busca por answer_id (usado na Mesa do Corretor)
+CREATE INDEX IF NOT EXISTS idx_redacoes_answer_id ON public.redacoes(answer_id);
+
+-- Índice: revisões por corretor
+CREATE INDEX IF NOT EXISTS idx_revisoes_corretor_id ON public.revisoes(corretor_id);
+
+-- Índice: revisões por redação
+CREATE INDEX IF NOT EXISTS idx_revisoes_redacao_id ON public.revisoes(redacao_id);
+
+-- Índice: feedbacks por usuário
+CREATE INDEX IF NOT EXISTS idx_feedbacks_user_id ON public.feedbacks(user_id);
+
+-- Índice: busca por tema dentro de extra_fields JSONB
+CREATE INDEX IF NOT EXISTS idx_redacoes_tema ON public.redacoes((extra_fields->>'redacao_tema'));
+```
+
+### Verificar se os índices foram criados
+
+```sql
+SELECT indexname, tablename, indexdef
+FROM pg_indexes
+WHERE schemaname = 'public'
+  AND indexname LIKE 'idx_%'
+ORDER BY tablename, indexname;
 ```
