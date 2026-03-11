@@ -2,12 +2,11 @@
 
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { Sparkles, Pencil, Search, Maximize, Rocket, Bug, Star, ChevronDown, CheckCircle2, Lightbulb } from 'lucide-react';
-import { EXAMPLES_FEATURES, EXAMPLES_RELEASES, ReleaseCategory } from '@/data/releases';
+import { Sparkles, Pencil, Search, Maximize, Rocket, Bug, Star, ChevronDown, CheckCircle2, Lightbulb, X, ArrowRight } from 'lucide-react';
+import { EXAMPLES_FEATURES, EXAMPLES_RELEASES, ReleaseNote, ReleaseCategory } from '@/data/releases';
 import { cn } from '@/lib/utils';
 import { FeedbackModal, FeedbackType } from '@/components/ajuda/FeedbackModal';
 
-// Mapeador de Ícones dinâmico pros cards de feature
 const iconMap: Record<string, React.ElementType> = {
     Sparkles,
     Pencil,
@@ -15,7 +14,6 @@ const iconMap: Record<string, React.ElementType> = {
     Maximize,
 };
 
-// Mapeador visual para as categorias de Releases
 const getCategoryStyle = (category: ReleaseCategory) => {
     switch (category) {
         case 'nova-feature':
@@ -29,10 +27,94 @@ const getCategoryStyle = (category: ReleaseCategory) => {
     }
 }
 
+// ────────────────────────────────────────────────────────────
+// Modal de Release Completa
+// ────────────────────────────────────────────────────────────
+function ReleaseModal({ release, onClose }: { release: ReleaseNote; onClose: () => void }) {
+    const style = getCategoryStyle(release.category);
+    const totalChanges = release.changes?.reduce((acc, s) => acc + s.items.length, 0) ?? 0;
+
+    return (
+        <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4"
+            onClick={onClose}
+        >
+            <div
+                className="bg-[#fdfaf2] rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+                onClick={e => e.stopPropagation()}
+            >
+                {/* Modal Header */}
+                <div className="flex items-start justify-between gap-4 p-8 pb-6 border-b border-[#eee9df] shrink-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className={cn("inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider", style.bg, style.text)}>
+                            <style.icon size={12} className="mr-1.5" />
+                            {style.label}
+                        </span>
+                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{release.date}</span>
+                        <span className="text-xs font-semibold text-gray-300 bg-white px-2 py-0.5 rounded-md border border-gray-100">{release.version}</span>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 rounded-full text-gray-400 hover:text-gray-700 hover:bg-black/5 transition-colors shrink-0"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
+
+                {/* Modal Title */}
+                <div className="px-8 pt-6 shrink-0">
+                    <h2 className="text-2xl font-extrabold text-dark-gray tracking-tight">{release.title}</h2>
+                    <p className="text-gray-500 mt-2 text-sm leading-relaxed">{release.description}</p>
+                    {totalChanges > 0 && (
+                        <p className="text-xs text-gray-400 mt-3 font-medium">{totalChanges} modificações nesta versão</p>
+                    )}
+                </div>
+
+                {/* Modal Changelog — scrollável */}
+                {release.changes && release.changes.length > 0 && (
+                    <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8">
+                        {release.changes.map((section, sIdx) => (
+                            <div key={sIdx}>
+                                <h3 className="text-sm font-bold text-dark-gray mb-4 flex items-center gap-2">
+                                    {section.section}
+                                </h3>
+                                <ul className="space-y-3">
+                                    {section.items.map((item, iIdx) => (
+                                        <li key={iIdx} className="flex items-start gap-3">
+                                            <span className="w-5 h-5 rounded-full bg-accent-red/10 text-accent-red flex items-center justify-center shrink-0 mt-0.5">
+                                                <ArrowRight size={11} />
+                                            </span>
+                                            <span className="text-sm text-gray-600 leading-relaxed">{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {/* Modal Footer */}
+                <div className="px-8 py-5 border-t border-[#eee9df] shrink-0">
+                    <button
+                        onClick={onClose}
+                        className="w-full py-3 rounded-xl bg-dark-gray text-white font-bold text-sm hover:bg-black transition-colors"
+                    >
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ────────────────────────────────────────────────────────────
+// Página Principal
+// ────────────────────────────────────────────────────────────
 export default function AjudaPage() {
     const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
     const [feedbackType, setFeedbackType] = useState<FeedbackType>('sugestao');
     const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
+    const [selectedRelease, setSelectedRelease] = useState<ReleaseNote | null>(null);
 
     const openFeedback = (type: FeedbackType) => {
         setFeedbackType(type);
@@ -47,7 +129,7 @@ export default function AjudaPage() {
         <DashboardLayout>
             <div className="flex flex-col h-full bg-background">
 
-                {/* Header Section — alinhado ao tema sépia */}
+                {/* Header — alinhado ao tema sépia */}
                 <div className="border-b border-[#eee9df] px-8 py-8 lg:px-12 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-accent-red rounded-2xl flex items-center justify-center text-white shadow-lg shadow-accent-red/20 shrink-0">
@@ -81,11 +163,11 @@ export default function AjudaPage() {
                 <div className="flex-1 overflow-y-auto w-full">
                     <div className="max-w-6xl mx-auto px-8 py-10 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
 
-                        {/* LEFT COLUMN: Features com Accordion */}
+                        {/* LEFT COLUMN: Feature Cards — Accordion */}
                         <div className="lg:col-span-7 space-y-8">
                             <div>
                                 <h2 className="text-xl font-bold text-dark-gray mb-1">Conheça as Ferramentas</h2>
-                                <p className="text-sm text-gray-500 mb-6 font-medium">Clique em uma ferramenta para ver o passo a passo de como usá-la.</p>
+                                <p className="text-sm text-gray-500 mb-6 font-medium">Clique em uma ferramenta para ver o passo a passo.</p>
 
                                 <div className="space-y-3">
                                     {EXAMPLES_FEATURES.map((feature) => {
@@ -103,7 +185,7 @@ export default function AjudaPage() {
                                                 )}
                                                 onClick={() => toggleFeature(feature.id)}
                                             >
-                                                {/* Card Header (always visible) */}
+                                                {/* Card Header */}
                                                 <div className="flex items-center gap-4 p-5">
                                                     <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border", feature.colorClass)}>
                                                         <IconComponent size={20} />
@@ -125,16 +207,13 @@ export default function AjudaPage() {
                                                     />
                                                 </div>
 
-                                                {/* Expanded Content */}
+                                                {/* Expanded Steps */}
                                                 {isExpanded && (
                                                     <div className="px-5 pb-6 border-t border-gray-100/80">
                                                         <p className="text-sm text-gray-600 leading-relaxed mt-4 mb-5">
                                                             {feature.fullDescription}
                                                         </p>
-
-                                                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">
-                                                            Como usar
-                                                        </p>
+                                                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-3">Como usar</p>
                                                         <ol className="space-y-2.5">
                                                             {feature.steps.map((step, idx) => (
                                                                 <li key={idx} className="flex items-start gap-3">
@@ -157,52 +236,61 @@ export default function AjudaPage() {
                             </div>
                         </div>
 
-                        {/* RIGHT COLUMN: Releases (Timeline) */}
+                        {/* RIGHT COLUMN: Releases — Timeline limpa, clique abre modal */}
                         <div className="lg:col-span-5">
                             <div className="bg-white/40 rounded-3xl p-6 sm:p-8 border border-gray-200/50 shadow-sm sticky top-8">
                                 <h2 className="text-xl font-bold text-dark-gray mb-1">Últimas Atualizações</h2>
-                                <p className="text-sm text-gray-500 mb-8 font-medium">O que rolou de novo no sistema.</p>
+                                <p className="text-sm text-gray-500 mb-8 font-medium">Clique numa release para ver o changelog completo.</p>
 
-                                <div className="space-y-8 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-gray-100 before:to-transparent">
-
+                                <div className="space-y-6">
                                     {EXAMPLES_RELEASES.map((release, index) => {
                                         const style = getCategoryStyle(release.category);
                                         const isLast = index === EXAMPLES_RELEASES.length - 1;
+                                        const hasDetails = release.changes && release.changes.length > 0;
+                                        const totalChanges = release.changes?.reduce((acc, s) => acc + s.items.length, 0) ?? 0;
 
                                         return (
-                                            <div key={release.id} className="relative flex items-start gap-6 group">
-
+                                            <div key={release.id} className="relative flex items-start gap-4">
                                                 {/* Timeline Node */}
-                                                <div className="flex flex-col items-center">
-                                                    <div className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-white border-2 border-white shadow-sm ring-4 ring-gray-50/50 relative z-10 shrink-0", style.text)}>
-                                                        <style.icon size={18} />
+                                                <div className="flex flex-col items-center shrink-0">
+                                                    <div className={cn("w-9 h-9 rounded-full flex items-center justify-center bg-white border-2 border-white shadow-sm ring-4 ring-gray-50/50 relative z-10", style.text)}>
+                                                        <style.icon size={16} />
                                                     </div>
-                                                    {!isLast && <div className="w-0.5 h-full bg-gray-100 mt-2"></div>}
+                                                    {!isLast && <div className="w-0.5 flex-1 bg-gray-100 mt-2 min-h-[24px]"></div>}
                                                 </div>
 
-                                                {/* Card Content */}
-                                                <div className="flex-1 pb-4">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                                                        <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider w-fit", style.bg, style.text)}>
+                                                {/* Card — clicável */}
+                                                <div
+                                                    className={cn(
+                                                        "flex-1 p-4 rounded-2xl border bg-white/30 border-gray-200/50 transition-all",
+                                                        hasDetails && "cursor-pointer hover:border-gray-300/60 hover:shadow-md hover:bg-white/50"
+                                                    )}
+                                                    onClick={() => hasDetails && setSelectedRelease(release)}
+                                                >
+                                                    <div className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+                                                        <span className={cn("inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider", style.bg, style.text)}>
                                                             {style.label}
                                                         </span>
-                                                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">{release.date}</span>
+                                                        <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">{release.date}</span>
                                                     </div>
 
-                                                    <h3 className="text-base font-bold text-dark-gray mb-1.5 flex items-center gap-2">
+                                                    <h3 className="text-sm font-bold text-dark-gray flex items-center gap-2 flex-wrap">
                                                         {release.title}
-                                                        <span className="text-xs font-semibold text-gray-300 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">{release.version}</span>
+                                                        <span className="text-[10px] font-semibold text-gray-300 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-100">{release.version}</span>
                                                     </h3>
 
-                                                    <p className="text-sm text-gray-500 leading-relaxed font-medium">
-                                                        {release.description}
-                                                    </p>
+                                                    <p className="text-xs text-gray-500 leading-relaxed mt-1.5">{release.description}</p>
+
+                                                    {hasDetails && (
+                                                        <p className="text-[11px] text-accent-red font-bold mt-3 flex items-center gap-1">
+                                                            <ArrowRight size={11} />
+                                                            {totalChanges} mudanças — ver changelog completo
+                                                        </p>
+                                                    )}
                                                 </div>
-
                                             </div>
-                                        )
+                                        );
                                     })}
-
                                 </div>
                             </div>
                         </div>
@@ -210,6 +298,14 @@ export default function AjudaPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Modal de Release Completa */}
+            {selectedRelease && (
+                <ReleaseModal
+                    release={selectedRelease}
+                    onClose={() => setSelectedRelease(null)}
+                />
+            )}
 
             <FeedbackModal
                 isOpen={isFeedbackOpen}
