@@ -53,6 +53,7 @@ Criamos um ambiente de distração zero para que o corretor possa mergulhar no t
 Redesenhamos os componentes de controle para maximizar a área visível da redação e da devolutiva.
 - **Cabeçalho All-in-One**: O topo da mesa agora centraliza absolutamente todos os controles. Sair da mesa, Identificação do Aluno, Critérios de Avaliação, Ferramentas de Edição e as ações de Salvar/Finalizar coexistem em uma única linha premium.
 - **Cabeçalho de Critérios Compacto**: Unificamos o nome e a descrição do critério em uma única linha (ex: C1 - Norma Culta), reduzindo drásticamente a ocupação vertical da área de trabalho.
+- **Tipografia Otimizada**: Ajustamos o tamanho da fonte da redação e reduzimos margens/paddings excessivos para garantir que mais conteúdo seja visível sem rolagens desnecessárias.
 - **Eliminação do Rodapé**: Com a migração das ações para o topo, removemos a barra inferior, garantindo 100% de aproveitamento vertical da tela para o conteúdo.
 - **Ícones sem Poluição**: Substituímos rótulos de texto por ícones elegantes e explicativos (Tooltips) para as ferramentas de edição.
 

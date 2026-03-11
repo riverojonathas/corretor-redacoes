@@ -59,7 +59,7 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
         version: 'v1.1',
         date: 'Março 2026',
         title: 'Modo Leitura Imersivo e Interface Unificada',
-        description: 'Implementação do Modo Leitura com ocultação de menus, unificação dos controles no cabeçalho (Single Row), cabeçalho de critérios compactado e melhorias na seção de avaliação final.',
+        description: 'Implementação do Modo Leitura com ocultação de menus, unificação dos controles no cabeçalho (Single Row), cabeçalho de critérios compactado e tipografia otimizada.',
         category: 'melhoria'
     },
     {

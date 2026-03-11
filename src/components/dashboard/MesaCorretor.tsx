@@ -957,18 +957,18 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         )}
 
                         {/* Título da Redação */}
-                        <div className="max-w-4xl mx-auto py-12 lg:py-20 px-4 sm:px-8">
-                            <h2 className="text-4xl font-serif font-black text-dark-gray mb-12 text-center leading-tight tracking-tight">
+                        <div className="max-w-4xl mx-auto py-8 lg:py-12 px-4 sm:px-8">
+                            <h2 className="text-2xl font-serif font-black text-dark-gray mb-6 text-center leading-tight tracking-tight">
                                 {redacao.title || 'Sem Título'}
                             </h2>
-                            <div className="w-24 h-px bg-accent-red/20 mx-auto mb-16" />
+                            <div className="w-16 h-px bg-accent-red/20 mx-auto mb-8" />
 
                             <div
                                 ref={textContainerRef}
                                 onMouseUp={handleTextSelection}
                                 className={cn(
-                                    "prose prose-slate max-w-none prose-p:leading-[1.8] prose-p:mb-6",
-                                    "text-dark-gray font-serif text-xl sm:text-2xl selection:bg-accent-red/10",
+                                    "prose prose-slate max-w-none prose-p:leading-[1.7] prose-p:mb-5",
+                                    "text-dark-gray font-serif text-lg sm:text-xl selection:bg-accent-red/10",
                                     readMode ? "mx-auto" : "w-full"
                                 )}
                                 style={{ whiteSpace: 'pre-wrap' }}
