@@ -11,7 +11,7 @@ export function Sidebar() {
     const pathname = usePathname();
     const { signOut, cargo } = useAuth();
 
-    const menuItems = [
+    const menuItems: { icon: React.ElementType; label: string; href: string; newTab?: boolean }[] = [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
         { icon: Edit3, label: 'Birô de Revisão', href: '/dashboard/revisao' },
         ...(cargo === 'admin' ? [
@@ -19,7 +19,7 @@ export function Sidebar() {
             { icon: Inbox, label: 'Feedbacks', href: '/admin/feedbacks' },
             { icon: Upload, label: 'Upload', href: '/admin/upload' }
         ] : []),
-        { icon: HelpCircle, label: 'Central de Ajuda', href: '/ajuda' },
+        { icon: HelpCircle, label: 'Central de Ajuda', href: '/ajuda', newTab: true },
         { icon: Settings, label: 'Configurações', href: '/settings' },
     ];
 
@@ -41,9 +41,11 @@ export function Sidebar() {
                             key={item.href}
                             href={item.href}
                             title={item.label}
+                            target={item.newTab ? '_blank' : undefined}
+                            rel={item.newTab ? 'noopener noreferrer' : undefined}
                             className={cn(
                                 "p-2 rounded-lg transition-all duration-200 group relative",
-                                isActive
+                                isActive && !item.newTab
                                     ? "bg-accent-red text-white shadow-sm"
                                     : "text-gray-500 hover:text-dark-gray hover:bg-black/5"
                             )}
