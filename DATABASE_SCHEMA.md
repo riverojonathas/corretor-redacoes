@@ -47,6 +47,8 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `extra_fields` | `jsonb` | Metadados extras (ex: `redacao_tema`, `redacao_ano_serie`, `redacao_zerada`) |
 | `created_at` | `timestamptz` | Data de ingestão / Data do registro base (`createdAt`) |
 | `updated_at` | `timestamptz` | Data de atualização original (`updatedAt`) |
+| `locked_by` | `uuid` | FK para `perfis.id` — corretor que está revisando (Fase D) |
+| `locked_at` | `timestamptz` | Timestamp de quando o lock foi adquirido (Fase D) |
 
 ---
 
@@ -281,4 +283,57 @@ ORDER BY nota_media DESC;
 ```sql
 SELECT * FROM public.dashboard_stats;
 SELECT * FROM public.dashboard_stats_por_serie LIMIT 10;
+```
+
+---
+
+## 7. Fase D — Sistema de Lock de Redações (Março 2026)
+
+Implementado para evitar que dois corretores revisem a mesma redação simultaneamente.
+
+### Migration SQL (aplicar no Supabase)
+
+```sql
+-- Adicionar colunas de lock na tabela redacoes
+ALTER TABLE public.redacoes
+  ADD COLUMN IF NOT EXISTS locked_by uuid REFERENCES perfis(id),
+  ADD COLUMN IF NOT EXISTS locked_at timestamptz;
+
+-- Função para liberar locks expirados (TTL 30 min)
+-- Pode ser agendada via pg_cron ou chamada manualmente
+CREATE OR REPLACE FUNCTION release_expired_locks()
+RETURNS void AS $$
+  UPDATE public.redacoes
+  SET locked_by = NULL, locked_at = NULL
+  WHERE locked_at < NOW() - INTERVAL '30 minutes';
+$$ LANGUAGE sql SECURITY DEFINER;
+```
+
+### Como funciona
+
+| Evento | Ação |
+|---|---|
+| Corretor abre uma redação | `POST /api/lock` — adquire lock (ou retorna 409 se bloqueado) |
+| Corretor está na mesa (a cada 10 min) | `POST /api/lock` — renova o `locked_at` automaticamente (keepalive) |
+| Corretor salva e finaliza | `DELETE /api/lock` — libera o lock |
+| Corretor sai da mesa | `DELETE /api/lock` — libera o lock |
+| Corretor fecha a aba/browser | `navigator.sendBeacon('/api/lock-release')` — tenta liberar |
+| Lock não renovado por 30 min | `release_expired_locks()` — expira automaticamente |
+
+### Lock na lista de redações
+
+- `useRedacoesList` busca `locked_by` e `locked_at` em cada redação
+- Calcula `isLocked = locked_by != userId && locked_at + 30min > now()`
+- `RedacaoList` exibe badge laranja **"Em uso"** nos itens bloqueados
+
+### Verificar locks ativos
+
+```sql
+SELECT r.id, r.title, r.nick, p.nome AS corretor_nome, r.locked_at,
+       NOW() - r.locked_at AS tempo_lock
+FROM public.redacoes r
+JOIN public.perfis p ON p.id = r.locked_by
+WHERE r.locked_by IS NOT NULL
+  AND r.locked_at > NOW() - INTERVAL '30 minutes'
+ORDER BY r.locked_at DESC;
 ```
