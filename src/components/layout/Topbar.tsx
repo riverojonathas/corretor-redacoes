@@ -43,7 +43,7 @@ export function Topbar() {
         const labels: Record<string, string> = {
             'dashboard': 'Dashboard',
             'correcao': 'Correção',
-            'revisao': 'Revisão',
+            'revisao': 'Mesa de Correção',
             'redacoes': 'Redações',
             'admin': 'Admin',
             'upload': 'Upload',

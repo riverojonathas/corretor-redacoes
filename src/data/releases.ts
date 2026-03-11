@@ -60,9 +60,9 @@ export const EXAMPLES_FEATURES: FeaturePill[] = [
         id: 'smart-filters',
         title: 'Filtros Dinâmicos',
         shortDescription: 'Ache a redação que você quer corrigir em segundos.',
-        fullDescription: 'O painel de filtros no Birô de Revisão permite encontrar textos pendentes, em revisão ou finalizados de forma precisa. Use filtros combinados para organizar o seu fluxo.',
+        fullDescription: 'O painel de filtros na Mesa de Revisão permite encontrar textos pendentes, em revisão ou finalizados de forma precisa. Use filtros combinados para organizar o seu fluxo.',
         steps: [
-            'Acesse o "Birô de Revisão" pelo menu lateral.',
+            'Acesse a "Mesa de Revisão" pelo menu lateral.',
             'Use a barra de busca para pesquisar pelo Nick ou Tema da redação.',
             'Use os filtros de "Status" e "Série" para refinar a lista.',
             'Clique em uma redação da lista para abri-la na Mesa do Corretor.',
@@ -248,7 +248,7 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                 items: [
                     'Mesa do Corretor com painel dual (redação + formulário de avaliação).',
                     'Marca-texto com 3 cores (verde, amarelo, vermelho) e balões de observação.',
-                    'Filtros por Status, Nick e Tema no Birô de Revisão.',
+                    'Filtros por Status, Nick e Tema na Mesa de Correção.',
                     'Modo Foco para leitura imersiva.',
                     'Salvar Rascunho e Finalizar Revisão.',
                 ],

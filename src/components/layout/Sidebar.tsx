@@ -13,7 +13,7 @@ export function Sidebar() {
 
     const menuItems: { icon: React.ElementType; label: string; href: string; newTab?: boolean }[] = [
         { icon: LayoutDashboard, label: 'Dashboard', href: '/dashboard' },
-        { icon: Edit3, label: 'Birô de Revisão', href: '/dashboard/revisao' },
+        { icon: Edit3, label: 'Mesa de Correção', href: '/dashboard/revisao' },
         ...(cargo === 'admin' ? [
             { icon: Users, label: 'Usuários', href: '/admin/users' },
             { icon: Inbox, label: 'Feedbacks', href: '/admin/feedbacks' },

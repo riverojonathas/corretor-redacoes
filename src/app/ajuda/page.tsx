@@ -39,6 +39,25 @@ export default function AjudaPage() {
         <PublicLayout>
             <div className="flex flex-col h-full bg-background">
 
+                {/* Bloco de boas-vindas — atalho direto para o fluxo principal */}
+                <div className="w-full border-b border-[#eee9df] bg-white/30">
+                    <div className="max-w-6xl mx-auto px-8 lg:px-12 py-10 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                        <div>
+                            <h1 className="text-2xl font-extrabold text-dark-gray tracking-tight">Central do Corretor</h1>
+                            <p className="text-gray-500 mt-1 text-sm font-medium max-w-lg">
+                                Plataforma interna para o time de redação revisar e auditar as correções da IA.
+                                Aqui você encontra dicas, novidades e passo a passo das ferramentas.
+                            </p>
+                        </div>
+                        <a
+                            href="/dashboard/revisao"
+                            className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-[#e63946] text-white font-bold text-sm rounded-xl hover:bg-[#c1121f] transition-colors shadow-sm shadow-red-400/20 whitespace-nowrap"
+                        >
+                            Acessar a Mesa de Correção →
+                        </a>
+                    </div>
+                </div>
+
                 {/* Main Content */}
                 <div className="flex-1 overflow-y-auto w-full">
                     <div className="max-w-6xl mx-auto px-8 py-10 lg:px-12 grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16">
