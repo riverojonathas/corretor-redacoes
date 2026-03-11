@@ -44,3 +44,31 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: error.message || 'Erro Desconhecido' }, { status: 500 });
     }
 }
+
+// GET — retorna todos os feedbacks do usuário autenticado
+export async function GET(req: NextRequest) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const userId = searchParams.get('userId');
+
+        if (!userId) {
+            return NextResponse.json({ error: 'userId é obrigatório.' }, { status: 400 });
+        }
+
+        const supabaseAdmin = getAdminSupabase();
+
+        const { data, error } = await supabaseAdmin
+            .from('feedbacks')
+            .select('id, tipo, mensagem, status, created_at')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        return NextResponse.json({ feedbacks: data ?? [] }, { status: 200 });
+
+    } catch (error: any) {
+        console.error('Erro ao buscar feedbacks (API):', error);
+        return NextResponse.json({ error: error.message || 'Erro Desconhecido' }, { status: 500 });
+    }
+}
