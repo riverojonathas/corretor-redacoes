@@ -3,11 +3,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PublicLayout } from '@/components/layout/PublicLayout';
-import { Sparkles, Pencil, Search, Maximize, Rocket, Bug, Star, ChevronDown, CheckCircle2, Lightbulb, ArrowRight } from 'lucide-react';
+import { Pencil, Search, Maximize, Rocket, Bug, Star, ChevronDown, CheckCircle2, ArrowRight, Sparkles } from 'lucide-react';
 import { EXAMPLES_FEATURES, EXAMPLES_RELEASES, ReleaseCategory } from '@/data/releases';
 import { cn } from '@/lib/utils';
-import { FeedbackModal, FeedbackType } from '@/components/ajuda/FeedbackModal';
-import { useAuth } from '@/context/AuthContext';
 
 const iconMap: Record<string, React.ElementType> = {
     Sparkles,
@@ -31,15 +29,7 @@ const getCategoryStyle = (category: ReleaseCategory) => {
 
 export default function AjudaPage() {
     const router = useRouter();
-    const { user } = useAuth();
-    const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
-    const [feedbackType, setFeedbackType] = useState<FeedbackType>('sugestao');
     const [expandedFeature, setExpandedFeature] = useState<string | null>(null);
-
-    const openFeedback = (type: FeedbackType) => {
-        setFeedbackType(type);
-        setIsFeedbackOpen(true);
-    };
 
     const toggleFeature = (id: string) => {
         setExpandedFeature(prev => prev === id ? null : id);
@@ -48,39 +38,6 @@ export default function AjudaPage() {
     return (
         <PublicLayout>
             <div className="flex flex-col h-full bg-background">
-
-                {/* Header */}
-                <div className="border-b border-[#eee9df] px-8 py-8 lg:px-12 w-full flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-accent-red rounded-2xl flex items-center justify-center text-white shadow-lg shadow-accent-red/20 shrink-0">
-                            <Sparkles size={24} />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-extrabold text-dark-gray tracking-tight">Central do Corretor</h1>
-                            <p className="text-gray-500 mt-0.5 font-medium text-sm">Novidades, dicas e como dominar a mesa de correção.</p>
-                        </div>
-                    </div>
-
-                    {/* Botões de feedback — apenas para usuários logados */}
-                    {user && (
-                        <div className="flex items-center gap-3 self-start sm:self-auto">
-                            <button
-                                onClick={() => openFeedback('sugestao')}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold text-sm rounded-xl transition-colors border border-emerald-200/50 shadow-sm"
-                            >
-                                <Lightbulb size={16} />
-                                <span>Sugerir Melhoria</span>
-                            </button>
-                            <button
-                                onClick={() => openFeedback('bug')}
-                                className="flex items-center gap-2 px-4 py-2.5 bg-red-50 text-red-700 hover:bg-red-100 font-bold text-sm rounded-xl transition-colors border border-red-200/50 shadow-sm"
-                            >
-                                <Bug size={16} />
-                                <span>Reportar Erro</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
 
                 {/* Main Content */}
                 <div className="flex-1 overflow-y-auto w-full">
@@ -219,15 +176,6 @@ export default function AjudaPage() {
                     </div>
                 </div>
             </div>
-
-            {/* Modal de feedback — só disponível para logados */}
-            {user && (
-                <FeedbackModal
-                    isOpen={isFeedbackOpen}
-                    onClose={() => setIsFeedbackOpen(false)}
-                    initialType={feedbackType}
-                />
-            )}
         </PublicLayout>
     );
 }
