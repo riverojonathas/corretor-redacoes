@@ -9,12 +9,13 @@ import {
     Check,
     Clock,
     GraduationCap,
-    ClipboardList,
+    FileEdit,
     ChevronRight,
     ChevronDown,
     Loader2,
     Lock,
-    Search
+    Search,
+    Hash
 } from 'lucide-react';
 import { RedacaoListItem } from '@/types/dashboard';
 import { ListFilters, FilterStatus } from '@/hooks/useRedacoesList';
@@ -184,10 +185,6 @@ export function RedacaoList({
                                 >
                                     <div className="flex-1 min-w-0 pr-4">
                                         <div className="flex items-center flex-wrap gap-2 mb-3">
-                                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-indigo-100/30 text-indigo-700 text-[10px] font-bold uppercase tracking-wider border border-indigo-200/30">
-                                                <ClipboardList size={12} />
-                                                {item.model_id || 'Geral'}
-                                            </span>
 
                                             {/* Badge de lock — Fase D */}
                                             {item.isLocked && (
@@ -196,17 +193,20 @@ export function RedacaoList({
                                                 </span>
                                             )}
 
+                                            {/* Badge de status — diferenciado por cor e ícone */}
                                             {item.status === 'concluida' || item.status === 'corrigida' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-100/30 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-200/30">
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-green-100/40 text-green-700 text-[10px] font-bold uppercase tracking-wider border border-green-200/50">
                                                     <Check size={12} /> Concluída
                                                 </span>
                                             ) : item.status === 'rascunho' ? (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-yellow-100/30 text-yellow-700 text-[10px] font-bold uppercase tracking-wider border border-yellow-200/30">
-                                                    <Clock size={12} /> Rascunho
+                                                // Rascunho: laranja com ícone de lápis (em progresso)
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-orange-100/40 text-orange-700 text-[10px] font-bold uppercase tracking-wider border border-orange-300/50">
+                                                    <FileEdit size={12} /> Rascunho
                                                 </span>
                                             ) : (
-                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100/30 text-amber-700 text-[10px] font-bold uppercase tracking-wider border border-amber-200/30">
-                                                    <Clock size={12} /> Pendente
+                                                // Pendente: slate/cinza neutro (ainda não iniciada)
+                                                <span className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-100/60 text-slate-500 text-[10px] font-bold uppercase tracking-wider border border-slate-200/60">
+                                                    <Inbox size={12} /> Pendente
                                                 </span>
                                             )}
                                         </div>
@@ -217,6 +217,12 @@ export function RedacaoList({
                                         </h3>
 
                                         <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">
+                                            {/* Answer ID — referência principal do revisor */}
+                                            {item.answer_id && (
+                                                <span className="flex items-center gap-1 text-[11px] font-mono font-bold text-accent-red/70 bg-accent-red/5 border border-accent-red/10 px-2 py-0.5 rounded">
+                                                    <Hash size={10} />{item.answer_id}
+                                                </span>
+                                            )}
                                             <span className="flex items-center gap-1.5 text-gray-600 font-bold bg-black/5 px-2 py-0.5 rounded">
                                                 <UserIcon size={14} className="text-gray-500" />
                                                 {item.nick}
