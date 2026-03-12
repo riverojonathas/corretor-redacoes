@@ -185,13 +185,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 .from('redacoes').select('*').eq('id', id).single();
             if (redacaoError) throw redacaoError;
 
+            const { text: essayCleaned } = sanitizeTextWithHighlights(redacaoData.essay || '', []);
             let finalSkills = (redacaoData.evaluated_skills || []).map((s: any) => {
                 if (!s.comment) return s;
                 const { text: cleanComment } = sanitizeTextWithHighlights(s.comment, []);
                 return { ...s, comment: cleanComment };
             });
 
-            const processedRedacao = { ...redacaoData, evaluated_skills: finalSkills };
+            const processedRedacao = { ...redacaoData, essay: essayCleaned, evaluated_skills: finalSkills };
             setRedacao(processedRedacao);
 
             if (revisaoId) {
