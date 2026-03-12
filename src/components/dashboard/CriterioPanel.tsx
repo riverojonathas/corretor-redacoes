@@ -44,8 +44,14 @@ export function CriterioPanel({
     handleTextSelection,
 }: CriterioPanelProps) {
 
-    const isNegative = (val: string, isScoreTheme: boolean) =>
-        isScoreTheme ? val !== 'Adequada' : incorrectOptions.includes(val);
+    const getStatus = (val: string, isScoreTheme: boolean) => {
+        if (isScoreTheme) {
+            if (val === 'Adequada') return 'success';
+            if (val.includes('1 nível')) return 'warning';
+            return 'error';
+        }
+        return incorrectOptions.includes(val) ? 'error' : 'success';
+    };
 
     // Determine qual tema está aberto para este critério
     const currentOpenTema =
@@ -121,8 +127,8 @@ export function CriterioPanel({
                                 const currentCorrectOptions = isScoreTheme ? ['Adequada'] : correctOptions;
                                 const currentIncorrectOptions = isScoreTheme
                                     ? [
-                                        '1 ponto abaixo', '2 pontos abaixo', 'mais de dois pontos abaixo',
-                                        '1 ponto acima', '2 pontos acima', 'mais de dois pontos acima',
+                                        '1 nível abaixo', '2 níveis abaixo', 'mais de dois níveis abaixo',
+                                        '1 nível acima', '2 níveis acima', 'mais de dois níveis acima',
                                     ]
                                     : incorrectOptions;
 
@@ -163,14 +169,16 @@ export function CriterioPanel({
                                                     className={cn(
                                                         'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 transition-all',
                                                         isDone
-                                                            ? isNegative(currentValue, isScoreTheme)
-                                                                ? 'bg-rose-100 text-rose-600'
-                                                                : 'bg-emerald-100 text-emerald-600'
+                                                            ? getStatus(currentValue, isScoreTheme) === 'success'
+                                                                ? 'bg-emerald-100 text-emerald-600'
+                                                                : getStatus(currentValue, isScoreTheme) === 'warning'
+                                                                    ? 'bg-amber-100 text-amber-600'
+                                                                    : 'bg-rose-100 text-rose-600'
                                                             : 'bg-black/10 text-gray-400'
                                                     )}
                                                 >
                                                     {isDone
-                                                        ? isNegative(currentValue, isScoreTheme) ? '✕' : '✓'
+                                                        ? getStatus(currentValue, isScoreTheme) === 'success' ? '✓' : getStatus(currentValue, isScoreTheme) === 'warning' ? '!' : '✕'
                                                         : idx + 1}
                                                 </span>
                                                 <span
@@ -186,9 +194,11 @@ export function CriterioPanel({
                                                 <span
                                                     className={cn(
                                                         'text-[12px] font-bold px-3 py-1 rounded-full border transition-all',
-                                                        isNegative(currentValue, isScoreTheme)
-                                                            ? 'text-rose-700 bg-rose-50 border-rose-200'
-                                                            : 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                        getStatus(currentValue, isScoreTheme) === 'success'
+                                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                            : getStatus(currentValue, isScoreTheme) === 'warning'
+                                                                ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                                                : 'text-rose-700 bg-rose-50 border-rose-200'
                                                     )}
                                                 >
                                                     {currentValue}
@@ -215,21 +225,31 @@ export function CriterioPanel({
                                                     </button>
                                                 ))}
                                                 <div className="w-px h-4 bg-[#eee9df] mx-1" />
-                                                {currentIncorrectOptions.map((opt) => (
-                                                    <button
-                                                        key={opt}
-                                                        type="button"
-                                                        onClick={() => handleSelect(opt)}
-                                                        className={cn(
-                                                            'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
-                                                            currentValue === opt
-                                                                ? 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
-                                                                : 'bg-transparent text-gray-500 border-[#eee9df] hover:border-rose-200 hover:text-rose-600'
-                                                        )}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
+                                                {currentIncorrectOptions.map((opt) => {
+                                                    const status = getStatus(opt, isScoreTheme);
+                                                    return (
+                                                        <button
+                                                            key={opt}
+                                                            type="button"
+                                                            onClick={() => handleSelect(opt)}
+                                                            className={cn(
+                                                                'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
+                                                                currentValue === opt
+                                                                    ? status === 'warning'
+                                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm'
+                                                                        : 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                                                                    : 'bg-transparent text-gray-500 border-[#eee9df]',
+                                                                currentValue !== opt && (
+                                                                    status === 'warning'
+                                                                        ? 'hover:border-amber-200 hover:text-amber-600'
+                                                                        : 'hover:border-rose-200 hover:text-rose-600'
+                                                                )
+                                                            )}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         )}
                                     </div>
