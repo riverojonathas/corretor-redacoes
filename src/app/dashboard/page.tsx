@@ -134,7 +134,7 @@ export default function DashboardPage() {
                             {/* Ações para Corretores (Visualizado por todos) */}
                             <button onClick={() => router.push('/dashboard/revisao')} className="flex flex-col items-start p-5 rounded-xl border border-gray-200/40 bg-white/40 hover:border-accent-red/30 hover:bg-accent-red/5 hover:shadow-md transition-all group h-full">
                                 <FileText className="text-gray-500 group-hover:text-accent-red mb-3 transition-colors shrink-0" size={24} />
-                                <span className="font-semibold text-dark-gray">Mesa de Correção</span>
+                                <span className="font-semibold text-dark-gray">Mesa de Revisão</span>
                                 <span className="text-xs text-gray-500 mt-1 text-left">Acesse a fila para analisar textos e atribuir notas finais às redações pendentes.</span>
                             </button>
 

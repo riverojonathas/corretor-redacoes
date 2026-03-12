@@ -337,3 +337,35 @@ WHERE r.locked_by IS NOT NULL
   AND r.locked_at > NOW() - INTERVAL '30 minutes'
 ORDER BY r.locked_at DESC;
 ```
+
+---
+
+## 8. Fase E — Performance da Busca Unificada (Março 2026)
+
+Implementado para otimizar a nova interface de busca rápida na **Fila de Revisão**, onde o sistema busca simultaneamente no Título, Tema e Nick usando a operação `.ilike`.
+
+Sem esses índices, a busca combinada em textos realizar full-scan, comprometendo a performance à medida que o banco cresce. A extensão `pg_trgm` permite criar índices trigrama GIN otimizados para consultas `LIKE` / `ILIKE`.
+
+### Script SQL (Fase E)
+
+```sql
+-- Habilitar a extensão pg_trgm (necessária para índices de texto ilike)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- Índice para busca parcial no título (texto)
+CREATE INDEX IF NOT EXISTS idx_redacoes_title_trgm ON public.redacoes USING gin (title gin_trgm_ops);
+
+-- Índice para busca parcial no nick do aluno (texto)
+CREATE INDEX IF NOT EXISTS idx_redacoes_nick_trgm ON public.redacoes USING gin (nick gin_trgm_ops);
+
+-- Índice para busca parcial no tema extraído do JSONB (extra_fields)
+CREATE INDEX IF NOT EXISTS idx_redacoes_tema_trgm ON public.redacoes USING gin ((extra_fields->>'redacao_tema') gin_trgm_ops);
+```
+
+### Por que cada índice importa
+
+| Índice | Tabela | Coluna | Query beneficiada |
+| :--- | :--- | :--- | :--- |
+| `idx_redacoes_title_trgm` | `redacoes` | `title` | Busca por palavra no título da redação |
+| `idx_redacoes_nick_trgm` | `redacoes` | `nick` | Busca por fragmentos do apelido do autor |
+| `idx_redacoes_tema_trgm` | `redacoes` | `extra_fields->>'redacao_tema'` | Busca por palavras chave no modelo/tema da redação |

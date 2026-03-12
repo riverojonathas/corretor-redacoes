@@ -4,14 +4,16 @@ import { RedacaoListItem } from '@/types/dashboard';
 
 const PAGE_SIZE = 50;
 
+export type FilterStatus = 'todas' | 'pendente' | 'rascunho' | 'concluida';
+
 export interface ListFilters {
-    titulo: string;
-    nick: string;
+    busca: string;
     serie: string;
     favorita: boolean;
+    status: FilterStatus;
 }
 
-const INITIAL_FILTERS: ListFilters = { titulo: '', nick: '', serie: '', favorita: false };
+const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'todas' };
 
 export function useRedacoesList(userId: string | undefined) {
     const [lista, setLista] = useState<RedacaoListItem[]>([]);
@@ -40,20 +42,29 @@ export function useRedacoesList(userId: string | undefined) {
         if (!userId) return;
         setLoading(true);
         try {
+            let selectString = 'id, title, nick, extra_fields, answer_id, locked_by, locked_at';
+            
+            if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
+                selectString += `, revisoes!inner(id, corretor_id, favorita, status)`;
+            } else {
+                selectString += `, revisoes(id, corretor_id, favorita, status)`;
+            }
+
             let query = supabase
                 .from('redacoes')
-                .select('id, title, nick, extra_fields, answer_id, locked_by, locked_at, revisoes(id, corretor_id, favorita, status)')
+                .select(selectString)
                 .order('created_at', { ascending: false })
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
-            // Filtros server-side via .ilike()
-            if (debouncedFilters.titulo.trim()) {
-                query = query.or(
-                    `title.ilike.%${debouncedFilters.titulo}%,extra_fields->>redacao_tema.ilike.%${debouncedFilters.titulo}%`
-                );
+            if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
+                query = query.eq('revisoes.corretor_id', userId).eq('revisoes.status', debouncedFilters.status);
             }
-            if (debouncedFilters.nick.trim()) {
-                query = query.ilike('nick', `%${debouncedFilters.nick}%`);
+
+            // Filtros server-side via .ilike()
+            if (debouncedFilters.busca.trim()) {
+                query = query.or(
+                    `title.ilike.%${debouncedFilters.busca}%,extra_fields->>redacao_tema.ilike.%${debouncedFilters.busca}%,nick.ilike.%${debouncedFilters.busca}%`
+                );
             }
             if (debouncedFilters.serie.trim()) {
                 query = query.ilike('extra_fields->>redacao_ano_serie', `%${debouncedFilters.serie}%`);
@@ -64,7 +75,9 @@ export function useRedacoesList(userId: string | undefined) {
 
             if (redacoes) {
                 const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
-                    const rev = r.revisoes?.find((rev: any) => rev.corretor_id === userId);
+                    let revArray = r.revisoes;
+                    if (revArray && !Array.isArray(revArray)) revArray = [revArray];
+                    const rev = revArray?.find((revItem: any) => revItem.corretor_id === userId);
                     const extras = r.extra_fields || {};
                     // Verifica se o lock ainda é válido (TTL 30min)
                     const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -106,15 +119,17 @@ export function useRedacoesList(userId: string | undefined) {
         fetchLista(nextPage, true);
     }, [page, fetchLista]);
 
-    // Filtro client-side apenas para "favorita" (boolean simples sobre dados já carregados)
-    const listaFiltrada = debouncedFilters.favorita
-        ? lista.filter(r => r.favorita === true)
-        : lista;
+    // Filtro client-side apenas para "favorita" e "pendente" (boolean simples sobre dados já carregados)
+    const listaFiltrada = lista.filter(r => {
+        if (debouncedFilters.favorita && !r.favorita) return false;
+        if (debouncedFilters.status === 'pendente' && r.status !== 'pendente') return false;
+        return true;
+    });
 
     return {
         lista: listaFiltrada,
         loading,
-        hasMore: hasMore && !debouncedFilters.favorita,
+        hasMore: hasMore && !debouncedFilters.favorita && debouncedFilters.status !== 'pendente',
         filters,
         setFilters,
         loadMore,

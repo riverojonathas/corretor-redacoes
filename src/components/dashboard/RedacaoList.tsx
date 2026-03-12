@@ -13,10 +13,11 @@ import {
     ChevronRight,
     ChevronDown,
     Loader2,
-    Lock
+    Lock,
+    Search
 } from 'lucide-react';
 import { RedacaoListItem } from '@/types/dashboard';
-import { ListFilters } from '@/hooks/useRedacoesList';
+import { ListFilters, FilterStatus } from '@/hooks/useRedacoesList';
 
 interface RedacaoListProps {
     lista: RedacaoListItem[];
@@ -78,49 +79,61 @@ export function RedacaoList({
                 <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
             </div>
 
-            {/* Filtros — agora controlados pelo hook (server-side) */}
-            <div className="bg-white/40 p-6 rounded-2xl shadow-sm border border-gray-200/50 flex flex-col gap-4">
-                <div className="flex items-center gap-4 mb-2">
-                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-dark-gray">
-                        <input
-                            type="checkbox"
-                            checked={filters.favorita}
-                            onChange={(e) => setField('favorita', e.target.checked)}
-                            className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
-                        />
-                        Apenas Favoritas
-                    </label>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Tema / Título</label>
-                        <input
-                            type="text"
-                            placeholder="Buscar por tema..."
-                            value={filters.titulo}
-                            onChange={(e) => setField('titulo', e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
-                        />
+            {/* Tabs de Status */}
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-4 overflow-x-auto custom-scrollbar">
+                {(['todas', 'pendente', 'rascunho', 'concluida'] as FilterStatus[]).map(status => (
+                    <button
+                        key={status}
+                        onClick={() => setField('status', status)}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-bold capitalize transition-all whitespace-nowrap ${
+                            filters.status === status
+                                ? 'bg-dark-gray text-white shadow-md'
+                                : 'bg-transparent text-gray-500 hover:bg-gray-100 hover:text-dark-gray'
+                        }`}
+                    >
+                        {status === 'todas' ? 'Todas' : status + 's'}
+                    </button>
+                ))}
+            </div>
+
+            {/* Filtros */}
+            <div className="bg-white/40 p-6 rounded-2xl shadow-sm border border-gray-200/50 flex flex-col gap-4 mt-2">
+                <div className="flex flex-col md:flex-row gap-4 items-end">
+                    <div className="flex-1 w-full relative">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 pl-1">Busca Rápida</label>
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                            <input
+                                type="text"
+                                placeholder="Pesquisar por tema, título ou aluno (nick)..."
+                                value={filters.busca}
+                                onChange={(e) => setField('busca', e.target.value)}
+                                className="w-full bg-white border border-gray-200 shadow-sm rounded-xl pl-11 pr-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
+                            />
+                        </div>
                     </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Autor (Nick)</label>
+                    <div className="w-full md:w-64">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 pl-1">Série / Nível</label>
                         <input
                             type="text"
-                            placeholder="Buscar por nick..."
-                            value={filters.nick}
-                            onChange={(e) => setField('nick', e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Série</label>
-                        <input
-                            type="text"
-                            placeholder="Buscar por série..."
+                            placeholder="Ex: 3ª série..."
                             value={filters.serie}
                             onChange={(e) => setField('serie', e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
+                            className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
                         />
+                    </div>
+                    <div>
+                        <button
+                            onClick={() => setField('favorita', !filters.favorita)}
+                            className={`flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl text-sm font-bold transition-all border ${
+                                filters.favorita
+                                    ? 'bg-yellow-50 border-yellow-200 text-yellow-700 shadow-sm'
+                                    : 'bg-white border-gray-200 text-gray-500 hover:bg-gray-50'
+                            }`}
+                        >
+                            <Star size={18} className={filters.favorita ? "fill-yellow-500 text-yellow-500" : ""} />
+                            Favoritas
+                        </button>
                     </div>
                 </div>
             </div>
@@ -149,8 +162,8 @@ export function RedacaoList({
                         </div>
                         <h3 className="text-xl font-bold text-dark-gray mb-2">Fila Vazia</h3>
                         <p className="text-gray-500 max-w-sm">
-                            {filters.titulo || filters.nick || filters.serie
-                                ? 'Nenhuma redação encontrada para esses filtros.'
+                            {(filters.busca || filters.serie || filters.favorita || filters.status !== 'todas')
+                                ? 'Nenhuma redação encontrada para os filtros selecionados.'
                                 : 'Nenhuma redação encontrada.'}
                         </p>
                     </div>
@@ -198,9 +211,9 @@ export function RedacaoList({
                                             )}
                                         </div>
 
-                                        <h3 className="text-lg font-bold text-dark-gray truncate group-hover:text-red-500 transition-colors mb-2">
+                                        <h3 className="text-xl font-bold text-black truncate group-hover:text-red-600 transition-colors mb-2.5">
                                             {item.titulo_modelo || item.titulo}
-                                            {item.favorita && <Star size={16} className="inline-block ml-2 text-yellow-400 fill-yellow-400" />}
+                                            {item.favorita && <Star size={18} className="inline-block ml-3 text-yellow-400 fill-yellow-400 drop-shadow-sm" />}
                                         </h3>
 
                                         <div className="flex items-center flex-wrap gap-3 text-sm text-gray-500">

@@ -59,14 +59,57 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const [loadingRedacao, setLoadingRedacao] = useState(false);
     const [notFoundError, setNotFoundError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [pendingRoute, setPendingRoute] = useState<string | null>(null);
+    // Status da revisão carregada ('rascunho' | 'concluida' | null)
+    const [revisaoStatus, setRevisaoStatus] = useState<'rascunho' | 'concluida' | null>(null);
+    // Controla se o usuário confirmou editar uma revisão concluída
+    const [reEditConfirmed, setReEditConfirmed] = useState(false);
+    const [showReEditConfirm, setShowReEditConfirm] = useState(false);
 
     // ── Extracted hook ─────────────────────────────────────
     const {
-        formData, setFormData,
-        highlights, setHighlights,
+        formData, setFormData: _setFormData,
+        highlights, setHighlights: _setHighlights,
         showExitConfirm, setShowExitConfirm,
         isDirty, resetForm, syncPristine,
     } = useCorrectionState();
+
+    // Intercepta mudanças de form/highlights: se revisão está concluída e ainda não
+    // confirmou reedição, exibe o modal de aviso em vez de aplicar a mudança.
+    const pendingFormChange = React.useRef<any>(null);
+    const pendingHighlightsChange = React.useRef<any>(null);
+
+    const setFormData = React.useCallback((val: any) => {
+        if (revisaoStatus === 'concluida' && !reEditConfirmed) {
+            pendingFormChange.current = val;
+            setShowReEditConfirm(true);
+            return;
+        }
+        _setFormData(val);
+    }, [revisaoStatus, reEditConfirmed, _setFormData]);
+
+    const setHighlights = React.useCallback((val: any) => {
+        if (revisaoStatus === 'concluida' && !reEditConfirmed) {
+            pendingHighlightsChange.current = val;
+            setShowReEditConfirm(true);
+            return;
+        }
+        _setHighlights(val);
+    }, [revisaoStatus, reEditConfirmed, _setHighlights]);
+
+    // Confirmar reedição: aplica a mudança pendente e libera edição
+    const handleConfirmReEdit = React.useCallback(() => {
+        setReEditConfirmed(true);
+        setShowReEditConfirm(false);
+        if (pendingFormChange.current !== null) {
+            _setFormData(pendingFormChange.current);
+            pendingFormChange.current = null;
+        }
+        if (pendingHighlightsChange.current !== null) {
+            _setHighlights(pendingHighlightsChange.current);
+            pendingHighlightsChange.current = null;
+        }
+    }, [_setFormData, _setHighlights]);
 
     // ── Lock / Atribuição (Fase D) ─────────────────────────
     const { acquireLock, releaseLock } = useLock(user?.id);
@@ -123,15 +166,61 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         // Libera o lock ao sair
         if (redacao) await releaseLock(redacao.id);
         setLockBlocked(false);
+        
+        if (pendingRoute) {
+            window.location.href = pendingRoute;
+            return;
+        }
+
         if (initialAnswerId) {
-            router.push('/dashboard');
+            router.push('/dashboard/revisao');
         } else {
             setView('list');
             setHighlightPopup(null);
             setRedacao(null);
-            if (window.location.pathname.includes('/dashboard/revisao')) router.push('/dashboard');
+            if (window.location.pathname.includes('/dashboard/revisao')) router.push('/dashboard/revisao');
         }
-    }, [isDirty, initialAnswerId, router, redacao, releaseLock]);
+    }, [isDirty, initialAnswerId, router, redacao, releaseLock, pendingRoute]);
+
+    // ── Intercept Navigation & BeforeUnload ──────────────────
+    useEffect(() => {
+        if (view !== 'correction' || lockBlocked) return;
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isDirty()) {
+                e.preventDefault();
+                e.returnValue = ''; // Required for most modern browsers
+            }
+        };
+
+        const handleGlobalClick = (e: MouseEvent) => {
+            if (!isDirty()) return;
+
+            // Find the closest anchor tag
+            let target = e.target as HTMLElement | null;
+            while (target && target.tagName !== 'A') {
+                target = target.parentElement;
+            }
+
+            if (target && target.tagName === 'A') {
+                const href = target.getAttribute('href');
+                // Intercept navigation if it's leaving the current mesa context
+                if (href && !href.startsWith(window.location.pathname) && !target.getAttribute('target')) {
+                    e.preventDefault();
+                    setPendingRoute(href);
+                    setShowExitConfirm(true);
+                }
+            }
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        document.addEventListener('click', handleGlobalClick, { capture: true });
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            document.removeEventListener('click', handleGlobalClick, { capture: true });
+        };
+    }, [view, isDirty, lockBlocked]);
 
     // ── Inicialização: se tem answer_id direto, vai pra correção ─
     useEffect(() => {
@@ -196,6 +285,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             setRedacao(processedRedacao);
 
             if (revisaoId) {
+                setRevisaoStatus(null); // reset enquanto carrega
                 const { data: revData, error: revError } = await supabase
                     .from('revisoes').select('*, revisao_destaques(*)').eq('id', revisaoId).single();
                 if (!revError && revData) {
@@ -247,11 +337,16 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                     });
                     setRedacao({ ...processedRedacao, essay: cleanEssay, evaluated_skills: cleanSkills });
                     const allHls = [...cleanHighlights, ...cleanDevHighlights];
-                    setHighlights(allHls);
+                    _setHighlights(allHls);
                     syncPristine(mergedForm as any, allHls);
+                    // Armazenar o status da revisão carregada
+                    setRevisaoStatus((revData.status === 'concluida' ? 'concluida' : 'rascunho'));
+                    setReEditConfirmed(false);
                 }
             } else {
                 resetForm();
+                setRevisaoStatus(null);
+                setReEditConfirmed(false);
             }
         } catch (err) {
             console.error('Erro ao buscar redação:', err);
@@ -311,10 +406,15 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             }
             toast.success(isDraft ? 'Rascunho salvo com sucesso!' : 'Revisão finalizada com sucesso!');
             syncPristine(formData as any, highlights);
+            // Atualizar status local após salvar
+            setRevisaoStatus(isDraft ? 'rascunho' : 'concluida');
+            setReEditConfirmed(false);
             if (!isDraft) {
                 // Libera o lock ao finalizar
                 if (redacao) await releaseLock(redacao.id);
-                setTimeout(() => handleExitMesa(), 2000);
+                // Passa force=true para não acionar o guard de "alterações não salvas",
+                // já que a revisão foi finalizada e salva com sucesso.
+                setTimeout(() => handleExitMesa(true), 2000);
             }
         } catch (error: any) {
             console.error('Erro ao salvar:', error);
@@ -603,6 +703,8 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 onSaveRevisao={handleSaveRevisao}
                 submitting={submitting}
                 isAllComplete={isAllComplete}
+                revisaoStatus={revisaoStatus}
+                isDirty={isDirty}
             />
 
             <div className="flex flex-1 overflow-hidden">
@@ -724,8 +826,43 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 <ExitConfirmModal
                     onSaveAndExit={(e) => { handleSaveRevisao(e, true); setShowExitConfirm(false); }}
                     onExitWithoutSave={() => handleExitMesa(true)}
-                    onCancel={() => setShowExitConfirm(false)}
+                    onCancel={() => { setShowExitConfirm(false); setPendingRoute(null); }}
                 />
+            )}
+
+            {/* Modal: Confirmação de reedição de revisão concluída */}
+            {showReEditConfirm && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div
+                        className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300"
+                        onClick={() => { setShowReEditConfirm(false); pendingFormChange.current = null; pendingHighlightsChange.current = null; }}
+                    />
+                    <div className="bg-[#fdfaf2] border border-[#eee9df] w-full max-w-md rounded-3xl shadow-2xl relative z-10 p-8 animate-in zoom-in-95 duration-300">
+                        <div className="flex items-center gap-4 text-amber-500 mb-6">
+                            <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0">
+                                <AlertCircle size={24} />
+                            </div>
+                            <h3 className="text-xl font-bold text-dark-gray">Revisão já concluída</h3>
+                        </div>
+                        <p className="text-gray-600 text-sm leading-relaxed mb-8 text-center px-2">
+                            Esta revisão já foi <strong>finalizada e enviada</strong>. Ao editar, você poderá salvar novamente com as alterações realizadas. Deseja continuar?
+                        </p>
+                        <div className="flex flex-col gap-3">
+                            <button
+                                onClick={handleConfirmReEdit}
+                                className="w-full py-3.5 bg-amber-500 text-white font-black uppercase tracking-widest text-xs rounded-xl shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all"
+                            >
+                                Sim, editar revisão
+                            </button>
+                            <button
+                                onClick={() => { setShowReEditConfirm(false); pendingFormChange.current = null; pendingHighlightsChange.current = null; }}
+                                className="w-full py-3.5 bg-white/50 border border-gray-200/60 text-gray-500 font-bold uppercase tracking-wider text-[10px] rounded-xl hover:bg-white hover:text-dark-gray transition-all shadow-sm"
+                            >
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

@@ -15,7 +15,8 @@ import {
     EyeOff,
     ArrowLeft,
     Send,
-    Loader2
+    Loader2,
+    Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Redacao, Criterio } from '@/types/dashboard';
@@ -41,6 +42,9 @@ interface CorrectionHeaderProps {
     onSaveRevisao: (e: React.MouseEvent | React.FormEvent, isDraft: boolean) => void;
     submitting: boolean;
     isAllComplete: boolean;
+    // Status da revisão carregada e função para detectar alterações
+    revisaoStatus: 'rascunho' | 'concluida' | null;
+    isDirty: () => boolean;
 }
 
 export function CorrectionHeader({
@@ -62,8 +66,15 @@ export function CorrectionHeader({
     onExitMesa,
     onSaveRevisao,
     submitting,
-    isAllComplete
+    isAllComplete,
+    revisaoStatus,
+    isDirty
 }: CorrectionHeaderProps) {
+    // Revisão concluída e sem edições pendentes
+    const isConcluded = revisaoStatus === 'concluida' && !isDirty();
+    // Revisão concluída mas já editada (precisa re-salvar)
+    const isConcludedEdited = revisaoStatus === 'concluida' && isDirty();
+
     return (
         <div className="border-b border-gray-200/50 bg-[#fdfaf2] shrink-0 flex items-center justify-between px-6 py-2.5 gap-4 transition-all">
             {/* Esquerda: Sair + Estudante + Favoritar */}
@@ -188,26 +199,51 @@ export function CorrectionHeader({
                 </div>
 
                 <div className="flex items-center gap-2 pl-1">
-                    <button
-                        type="button"
-                        onClick={(e) => onSaveRevisao(e, true)}
-                        disabled={submitting}
-                        className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-dark-gray bg-white/50 border border-gray-200/60 rounded-xl hover:bg-white hover:border-gray-300 transition-all disabled:opacity-50 shadow-sm transition-all"
-                    >
-                        {submitting ? <Loader2 size={12} className="animate-spin" /> : 'Salvar'}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={(e) => onSaveRevisao(e, false)}
-                        disabled={submitting}
-                        className={cn(
-                            "flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50",
-                            isAllComplete ? "bg-accent-red shadow-accent-red/20" : "bg-gray-400"
-                        )}
-                    >
-                        {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                        Finalizar
-                    </button>
+                    {/* Botão Salvar Rascunho — fica oculto quando a revisão está concluída e sem edições */}
+                    {!isConcluded && (
+                        <button
+                            type="button"
+                            onClick={(e) => onSaveRevisao(e, true)}
+                            disabled={submitting}
+                            className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-dark-gray bg-white/50 border border-gray-200/60 rounded-xl hover:bg-white hover:border-gray-300 transition-all disabled:opacity-50 shadow-sm"
+                        >
+                            {submitting ? <Loader2 size={12} className="animate-spin" /> : 'Salvar'}
+                        </button>
+                    )}
+
+                    {/* Botão principal adaptativo */}
+                    {isConcluded ? (
+                        // Estado: concluída, sem edições — badge estático verde
+                        <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+                            <CheckCircle2 size={14} className="text-emerald-500" />
+                            Revisão Concluída
+                        </div>
+                    ) : isConcludedEdited ? (
+                        // Estado: concluída, mas editada — botão âmbar para salvar alterações
+                        <button
+                            type="button"
+                            onClick={(e) => onSaveRevisao(e, false)}
+                            disabled={submitting}
+                            className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white bg-amber-500 rounded-xl shadow-lg shadow-amber-500/20 hover:scale-105 active:scale-95 disabled:opacity-50 transition-all"
+                        >
+                            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                            Salvar Alterações
+                        </button>
+                    ) : (
+                        // Estado: normal (rascunho ou nova) — botão Finalizar
+                        <button
+                            type="button"
+                            onClick={(e) => onSaveRevisao(e, false)}
+                            disabled={submitting}
+                            className={cn(
+                                "flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white rounded-xl shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50",
+                                isAllComplete ? "bg-accent-red shadow-accent-red/20" : "bg-gray-400"
+                            )}
+                        >
+                            {submitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                            Finalizar
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
