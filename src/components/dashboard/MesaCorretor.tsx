@@ -240,7 +240,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             if (redacaoError || !redacaoData) { setNotFoundError(true); return; }
             const { data: revData } = await supabase
                 .from('revisoes').select('id')
-                .eq('redacao_id', redacaoData.id).eq('corretor_id', user!.id).single();
+                .eq('redacao_id', redacaoData.id).single();
             await handleSelectRedacao(redacaoData.id, revData?.id);
         } catch (err) {
             console.error('Erro ao buscar redação por answer_id:', err);
@@ -367,7 +367,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         try {
             const { data: revData } = await supabase
                 .from('revisoes').select('id')
-                .eq('redacao_id', redacao.id).eq('corretor_id', user.id).single();
+                .eq('redacao_id', redacao.id).single();
             let finalRevisaoId = revData?.id;
             const avaliacoes = criterios.map(c => ({
                 criterio_id: c.id,

@@ -57,7 +57,7 @@ export function useRedacoesList(userId: string | undefined) {
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
             if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
-                query = query.eq('revisoes.corretor_id', userId).eq('revisoes.status', debouncedFilters.status);
+                query = query.eq('revisoes.status', debouncedFilters.status);
             }
 
             // Filtros server-side via .ilike()
@@ -77,7 +77,9 @@ export function useRedacoesList(userId: string | undefined) {
                 const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
                     let revArray = r.revisoes;
                     if (revArray && !Array.isArray(revArray)) revArray = [revArray];
-                    const rev = revArray?.find((revItem: any) => revItem.corretor_id === userId);
+                    
+                    // Pega a primeira revisão encontrada (já que haverá apenas uma UNIQUE em breve)
+                    const rev = revArray?.[0];
                     const extras = r.extra_fields || {};
                     // Verifica se o lock ainda é válido (TTL 30min)
                     const LOCK_TTL_MS = 30 * 60 * 1000;
