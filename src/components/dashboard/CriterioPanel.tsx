@@ -21,7 +21,7 @@ interface CriterioPanelProps {
 }
 
 const correctOptions = ['Satisfatório', 'Vago', 'Incompleto', 'Com erros'];
-const incorrectOptions = ['Identificou incorretamente', 'Não identificou', 'Alucinação'];
+const incorrectOptions = ['Identificou incorretamente', 'Não identificou', 'Alucinação', 'Outro'];
 
 const temas = [
     { id: 1, label: 'Identificação de pontos positivos' },
@@ -45,6 +45,7 @@ export function CriterioPanel({
 }: CriterioPanelProps) {
 
     const getStatus = (val: string, isScoreTheme: boolean) => {
+        if (val === 'Outro') return 'info';
         if (isScoreTheme) {
             if (val === 'Adequada') return 'success';
             if (val.includes('1 nível')) return 'warning';
@@ -129,6 +130,7 @@ export function CriterioPanel({
                                     ? [
                                         '1 nível abaixo', '2 níveis abaixo', 'mais de dois níveis abaixo',
                                         '1 nível acima', '2 níveis acima', 'mais de dois níveis acima',
+                                        'Outro'
                                     ]
                                     : incorrectOptions;
 
@@ -173,12 +175,20 @@ export function CriterioPanel({
                                                                 ? 'bg-emerald-100 text-emerald-600'
                                                                 : getStatus(currentValue, isScoreTheme) === 'warning'
                                                                     ? 'bg-amber-100 text-amber-600'
-                                                                    : 'bg-rose-100 text-rose-600'
+                                                                    : getStatus(currentValue, isScoreTheme) === 'info'
+                                                                        ? 'bg-blue-100 text-blue-600'
+                                                                        : 'bg-rose-100 text-rose-600'
                                                             : 'bg-black/10 text-gray-400'
                                                     )}
                                                 >
                                                     {isDone
-                                                        ? getStatus(currentValue, isScoreTheme) === 'success' ? '✓' : getStatus(currentValue, isScoreTheme) === 'warning' ? '!' : '✕'
+                                                        ? getStatus(currentValue, isScoreTheme) === 'success'
+                                                            ? '✓'
+                                                            : getStatus(currentValue, isScoreTheme) === 'warning'
+                                                                ? '!'
+                                                                : getStatus(currentValue, isScoreTheme) === 'info'
+                                                                    ? '•'
+                                                                    : '✕'
                                                         : idx + 1}
                                                 </span>
                                                 <span
@@ -198,7 +208,9 @@ export function CriterioPanel({
                                                             ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                                                             : getStatus(currentValue, isScoreTheme) === 'warning'
                                                                 ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                                : 'text-rose-700 bg-rose-50 border-rose-200'
+                                                                : getStatus(currentValue, isScoreTheme) === 'info'
+                                                                    ? 'text-blue-700 bg-blue-50 border-blue-200'
+                                                                    : 'text-rose-700 bg-rose-50 border-rose-200'
                                                     )}
                                                 >
                                                     {currentValue}
@@ -237,12 +249,16 @@ export function CriterioPanel({
                                                                 currentValue === opt
                                                                     ? status === 'warning'
                                                                         ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm'
-                                                                        : 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                                                                        : status === 'info'
+                                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
+                                                                            : 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
                                                                     : 'bg-transparent text-gray-500 border-[#eee9df]',
                                                                 currentValue !== opt && (
                                                                     status === 'warning'
                                                                         ? 'hover:border-amber-200 hover:text-amber-600'
-                                                                        : 'hover:border-rose-200 hover:text-rose-600'
+                                                                        : status === 'info'
+                                                                            ? 'hover:border-blue-200 hover:text-blue-600'
+                                                                            : 'hover:border-rose-200 hover:text-rose-600'
                                                                 )
                                                             )}
                                                         >
