@@ -19,6 +19,7 @@ interface CriterioPanelProps {
     renderTextWithHighlights: (text: string, isDevolutiva?: boolean, criterioId?: number) => React.ReactNode;
     handleTextSelection: (e: React.MouseEvent) => void;
     hideIaScore?: boolean;
+    isViewer?: boolean;
 }
 
 const correctOptions = ['Satisfatório', 'Vago', 'Incompleto', 'Com erros'];
@@ -44,6 +45,7 @@ export function CriterioPanel({
     renderTextWithHighlights,
     handleTextSelection,
     hideIaScore = false,
+    isViewer = false,
 }: CriterioPanelProps) {
 
     const notaAtribuidaField = `criterio_${c.id}_nota_atribuida`;
@@ -252,45 +254,48 @@ export function CriterioPanel({
                                                                 min="0"
                                                                 max="10"
                                                                 id={`input-nota-${c.id}`}
-                                                                className="w-32 bg-white/40 border border-[#eee9df] rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red/30 outline-none transition-all"
+                                                                disabled={isViewer}
+                                                                className="w-32 bg-white/40 border border-[#eee9df] rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red/30 outline-none transition-all disabled:opacity-50"
                                                                 placeholder="Ex: 8.5"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const input = document.getElementById(`input-nota-${c.id}`) as HTMLInputElement;
-                                                                    if (!input || !input.value) return;
-                                                                    const val = parseFloat(input.value);
-                                                                    if (isNaN(val) || val < 0 || val > 10) return;
-                                                                    
-                                                                    const diff = notaIA - val;
-                                                                    let status = '';
-                                                                    if (diff >= -0.75 && diff <= 0.75) status = 'Adequada';
-                                                                    else if (diff >= -1.75 && diff <= -0.76) status = '1 nível abaixo';
-                                                                    else if (diff >= 0.76 && diff <= 1.75) status = '1 nível acima';
-                                                                    else if (diff >= -2.50 && diff <= -1.76) status = '2 níveis abaixo';
-                                                                    else if (diff >= 1.76 && diff <= 2.50) status = '2 níveis acima';
-                                                                    else if (diff <= -2.51) status = 'mais de dois níveis abaixo';
-                                                                    else if (diff >= 2.51) status = 'mais de dois níveis acima';
+                                                             />
+                                                             {!isViewer && (
+                                                                 <button
+                                                                     type="button"
+                                                                     onClick={() => {
+                                                                         const input = document.getElementById(`input-nota-${c.id}`) as HTMLInputElement;
+                                                                         if (!input || !input.value) return;
+                                                                         const val = parseFloat(input.value);
+                                                                         if (isNaN(val) || val < 0 || val > 10) return;
+                                                                         
+                                                                         const diff = notaIA - val;
+                                                                         let status = '';
+                                                                         if (diff >= -0.75 && diff <= 0.75) status = 'Adequada';
+                                                                         else if (diff >= -1.75 && diff <= -0.76) status = '1 nível abaixo';
+                                                                         else if (diff >= 0.76 && diff <= 1.75) status = '1 nível acima';
+                                                                         else if (diff >= -2.50 && diff <= -1.76) status = '2 níveis abaixo';
+                                                                         else if (diff >= 1.76 && diff <= 2.50) status = '2 níveis acima';
+                                                                         else if (diff <= -2.51) status = 'mais de dois níveis abaixo';
+                                                                         else if (diff >= 2.51) status = 'mais de dois níveis acima';
 
-                                                                    const newFormData = { 
-                                                                        ...formData, 
-                                                                        [fieldName]: status,
-                                                                        [notaAtribuidaField]: val
-                                                                    };
-                                                                    setFormData(newFormData);
-                                                                    
-                                                                    const currentIndex = temas.findIndex(t => t.id === tema.id);
-                                                                    const nextTema = temas.slice(currentIndex + 1).find(
-                                                                        (t) => !(newFormData as any)[`criterio_${c.id}_tema_${t.id}`]
-                                                                    );
-                                                                    
-                                                                    setOpenTema((prev) => ({ ...prev, [c.id]: nextTema?.id ?? null }));
-                                                                }}
-                                                                className="px-4 py-2 bg-dark-gray text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
-                                                            >
-                                                                Salvar Nota
-                                                            </button>
+                                                                         const newFormData = { 
+                                                                             ...formData, 
+                                                                             [fieldName]: status,
+                                                                             [notaAtribuidaField]: val
+                                                                         };
+                                                                         setFormData(newFormData);
+                                                                         
+                                                                         const currentIndex = temas.findIndex(t => t.id === tema.id);
+                                                                         const nextTema = temas.slice(currentIndex + 1).find(
+                                                                             (t) => !(newFormData as any)[`criterio_${c.id}_tema_${t.id}`]
+                                                                         );
+                                                                         
+                                                                         setOpenTema((prev) => ({ ...prev, [c.id]: nextTema?.id ?? null }));
+                                                                     }}
+                                                                     className="px-4 py-2 bg-dark-gray text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
+                                                                 >
+                                                                     Salvar Nota
+                                                                 </button>
+                                                             )}
                                                         </div>
                                                     </div>
                                                 ) : (
@@ -300,23 +305,26 @@ export function CriterioPanel({
                                                                 <span className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 inline-block">
                                                                     Nota Corretor: {notaAtribuida} <span className="text-gray-400 mx-1">|</span> Nota IA: {notaIA}
                                                                 </span>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => {
-                                                                        // Limpa a nota atribuída para poder re-avaliar cegamente se quiser
-                                                                        const newFormData = { ...formData, [notaAtribuidaField]: '' };
-                                                                        setFormData(newFormData);
-                                                                    }}
-                                                                    className="text-xs text-blue-500 hover:text-blue-700 underline font-semibold"
-                                                                >
-                                                                    Limpar Nota e Refazer
-                                                                </button>
+                                                                {!isViewer && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            // Limpa a nota atribuída para poder re-avaliar cegamente se quiser
+                                                                            const newFormData = { ...formData, [notaAtribuidaField]: '' };
+                                                                            setFormData(newFormData);
+                                                                        }}
+                                                                        className="text-xs text-blue-500 hover:text-blue-700 underline font-semibold"
+                                                                    >
+                                                                        Limpar Nota e Refazer
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         )}
                                                         {currentCorrectOptions.map((opt) => (
                                                             <button
                                                                 key={opt}
                                                                 type="button"
+                                                                disabled={isViewer}
                                                                 onClick={() => handleSelect(opt)}
                                                                 className={cn(
                                                                     'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
@@ -335,6 +343,7 @@ export function CriterioPanel({
                                                                 <button
                                                                     key={opt}
                                                                     type="button"
+                                                                    disabled={isViewer}
                                                                     onClick={() => handleSelect(opt)}
                                                                     className={cn(
                                                                         'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',

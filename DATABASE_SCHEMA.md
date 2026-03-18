@@ -17,7 +17,7 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `nome` | `text` | Nome completo do usuário |
 | `email` | `text` | E-mail do usuário |
 | `avatar_url` | `text` | URL da foto de perfil do usuário (armazenada no bucket 'avatars') |
-| `cargo` | `text` | Cargo ou função (ex: corretor, administrador) |
+| `cargo` | `text` | Cargo ou função (ex: corretor, admin, leitor) |
 | `primeiro_acesso` | `boolean` | Flag para exibição do popup de boas-vindas (default: true) |
 | `created_at` | `timestamptz` | Data de criação do perfil |
 

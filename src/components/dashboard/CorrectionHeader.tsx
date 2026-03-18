@@ -45,6 +45,7 @@ interface CorrectionHeaderProps {
     // Status da revisão carregada e função para detectar alterações
     revisaoStatus: 'rascunho' | 'concluida' | null;
     isDirty: () => boolean;
+    isViewer?: boolean;
 }
 
 export function CorrectionHeader({
@@ -68,7 +69,8 @@ export function CorrectionHeader({
     submitting,
     isAllComplete,
     revisaoStatus,
-    isDirty
+    isDirty,
+    isViewer = false
 }: CorrectionHeaderProps) {
     // Revisão concluída e sem edições pendentes
     const isConcluded = revisaoStatus === 'concluida' && !isDirty();
@@ -199,8 +201,8 @@ export function CorrectionHeader({
                 </div>
 
                 <div className="flex items-center gap-2 pl-1">
-                    {/* Botão Salvar Rascunho — fica oculto quando a revisão está concluída e sem edições */}
-                    {!isConcluded && (
+                    {/* Botão Salvar Rascunho — fica oculto quando a revisão está concluída e sem edições ou se for leitor */}
+                    {!isConcluded && !isViewer && (
                         <button
                             type="button"
                             onClick={(e) => onSaveRevisao(e, true)}
@@ -212,7 +214,12 @@ export function CorrectionHeader({
                     )}
 
                     {/* Botão principal adaptativo */}
-                    {isConcluded ? (
+                    {isViewer ? (
+                        <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-blue-700 bg-blue-50 border border-blue-200 rounded-xl shadow-sm">
+                            <Eye size={14} className="text-blue-500" />
+                            Modo Visualização
+                        </div>
+                    ) : isConcluded ? (
                         // Estado: concluída, sem edições — badge estático verde
                         <div className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
                             <CheckCircle2 size={14} className="text-emerald-500" />

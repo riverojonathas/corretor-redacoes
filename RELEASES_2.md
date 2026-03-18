@@ -12,6 +12,12 @@
 - **Tabela de Configurações**: Criação de `app_settings` no Supabase para controlar o estado global de opções.
 - **Auditoria Fiel**: Novos campos em `revisoes` que guardam exatamente o número atribuído nos critérios do revisor.
 
+### 👥 Novo Cargo: Leitor (Visualizador)
+- **Perfil Restrito**: Implementação do cargo `leitor` (viewer) destinado a usuários que precisam auditar ou consultar correções sem permissão de alteração.
+- **Modo Somente Leitura**: Ao acessar a mesa, o leitor visualiza os grifos e notas da IA/Corretor, mas todos os botões de ação, inputs e ferramentas de marca-texto ficam desabilitados.
+- **Badge de Identificação**: Exibição do status "Modo Visualização" no cabeçalho para diferenciar o acesso de consulta do acesso de trabalho.
+- **Gestão Admin**: Administradores agora podem atribuir a função "Leitor (Visualização)" através do Painel de Usuários.
+
 ### 📑 Fila de Revisão Otimizada
 - **Foco Padrão**: A visualização padrão agora lista primeiramente as redações na guia de "Pendentes", economizando carregamentos e pulando de cara para o trabalho disponível.
 - **Ordem das Abas**: A guia "Todas" com as centenas ou milhares de redações foi empedida do início para o final das opções, garantindo que o corretor não esbarre nelas a todo tempo.

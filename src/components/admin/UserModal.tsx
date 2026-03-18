@@ -140,6 +140,7 @@ export function UserModal({ isOpen, onClose, onSuccess, userToEdit }: UserModalP
                             className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-dark-gray focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red outline-none transition-all cursor-pointer appearance-none"
                         >
                             <option value="corretor">Corretor</option>
+                            <option value="leitor">Leitor (Visualização)</option>
                             <option value="admin">Administrador (Admin)</option>
                         </select>
                     </div>

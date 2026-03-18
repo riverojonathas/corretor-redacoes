@@ -143,6 +143,15 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                     'Poupamos incríveis 80% das chamadas HTTP da API quando abrindo um documento (Fim da Cascata de Queries/Waterfall). Substituímos tudo usando Join Supabase Massivo por Baixo dos Panos, acelerando o loading final.',
                 ],
             },
+            {
+                section: '👥 Novo Cargo: Leitor (Somente Visualização)',
+                items: [
+                    'Implementação do perfil "leitor" destinado a auditoria e consulta.',
+                    'Bloqueio completo de interface para este cargo: botões ocultos, entradas de texto desativadas e marca-texto bloqueado.',
+                    'Badge de "Modo Visualização" exibido no cabeçalho das redações.',
+                    'Administradores agora podem criar ou editar usuários com esta função.',
+                ],
+            },
         ],
     },
     {

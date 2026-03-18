@@ -183,12 +183,14 @@ export default function AdminUsersPage() {
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-6">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${user.cargo === 'admin' ? 'bg-accent-red/10 text-accent-red' : 'bg-gray-100 text-gray-600'
-                                                    }`}>
-                                                    {user.cargo || 'corretor'}
-                                                </span>
-                                            </td>
+                                             <td className="py-4 px-6">
+                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider ${user.cargo === 'admin' ? 'bg-accent-red/10 text-accent-red' :
+                                                     user.cargo === 'leitor' ? 'bg-blue-100 text-blue-600' :
+                                                         'bg-gray-100 text-gray-600'
+                                                     }`}>
+                                                     {user.cargo || 'corretor'}
+                                                 </span>
+                                             </td>
                                             <td className="py-4 px-6 text-sm text-gray-500 font-medium">
                                                 {user.created_at ? format(new Date(user.created_at), "dd 'de' MMM, yyyy", { locale: ptBR }) : '-'}
                                             </td>

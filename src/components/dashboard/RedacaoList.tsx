@@ -31,6 +31,7 @@ interface RedacaoListProps {
     notFoundError: boolean;
     onSelectRedacao: (id: string, revisaoId?: string) => void;
     onGoToRevision: (answerId: string) => void;
+    isViewer?: boolean;
 }
 
 export function RedacaoList({
@@ -44,6 +45,7 @@ export function RedacaoList({
     notFoundError,
     onSelectRedacao,
     onGoToRevision,
+    isViewer = false,
 }: RedacaoListProps) {
 
     const setField = <K extends keyof ListFilters>(key: K, value: ListFilters[K]) => {
@@ -76,8 +78,8 @@ export function RedacaoList({
     return (
         <div className="p-8 max-w-5xl mx-auto w-full space-y-8 min-h-[calc(100vh-64px)]">
             <div>
-                <h1 className="text-3xl font-bold text-dark-gray">Fila de Revisão</h1>
-                <p className="text-gray-500 mt-2">Selecione uma redação para avaliar ou revisar sua correção.</p>
+                <h1 className="text-3xl font-bold text-dark-gray">{isViewer ? 'Consulta de Redações' : 'Fila de Revisão'}</h1>
+                <p className="text-gray-500 mt-2">{isViewer ? 'Visualize as redações e suas respectivas avaliações.' : 'Selecione uma redação para avaliar ou revisar sua correção.'}</p>
             </div>
 
             {/* Tabs de Status */}

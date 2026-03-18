@@ -39,8 +39,9 @@ const defaultCriterios: Criterio[] = [
 ];
 
 export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) {
-    const { user } = useAuth();
+    const { user, cargo } = useAuth();
     const router = useRouter();
+    const isViewer = cargo === 'leitor';
 
     // ── View State ──────────────────────────────────────────
     const [view, setView] = useState<'list' | 'correction'>(initialAnswerId ? 'correction' : 'list');
@@ -81,22 +82,24 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const pendingHighlightsChange = React.useRef<any>(null);
 
     const setFormData = React.useCallback((val: any) => {
+        if (isViewer) return;
         if (revisaoStatus === 'concluida' && !reEditConfirmed) {
             pendingFormChange.current = val;
             setShowReEditConfirm(true);
             return;
         }
         _setFormData(val);
-    }, [revisaoStatus, reEditConfirmed, _setFormData]);
+    }, [revisaoStatus, reEditConfirmed, _setFormData, isViewer]);
 
     const setHighlights = React.useCallback((val: any) => {
+        if (isViewer) return;
         if (revisaoStatus === 'concluida' && !reEditConfirmed) {
             pendingHighlightsChange.current = val;
             setShowReEditConfirm(true);
             return;
         }
         _setHighlights(val);
-    }, [revisaoStatus, reEditConfirmed, _setHighlights]);
+    }, [revisaoStatus, reEditConfirmed, _setHighlights, isViewer]);
 
     // Confirmar reedição: aplica a mudança pendente e libera edição
     const handleConfirmReEdit = React.useCallback(() => {
@@ -386,7 +389,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     const handleSaveRevisao = async (e: React.FormEvent, isDraft: boolean) => {
         e.preventDefault();
-        if (!redacao || !user) return;
+        if (!redacao || !user || isViewer) return;
         if (!isDraft && !isAllComplete) {
             toast.error('Preencha todos os campos obrigatórios para finalizar a revisão.');
             return;
@@ -632,6 +635,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 notFoundError={notFoundError}
                 onSelectRedacao={handleSelectRedacao}
                 onGoToRevision={(answerId) => router.push(`/dashboard/revisao/${answerId}`)}
+                isViewer={isViewer}
             />
         );
     }
@@ -708,13 +712,14 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                 isAllComplete={isAllComplete}
                 revisaoStatus={revisaoStatus}
                 isDirty={isDirty}
+                isViewer={isViewer}
             />
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Coluna da Esquerda: Texto */}
                 <div className="w-1/2 flex flex-col border-r border-gray-200/50 bg-[#fdfaf2] relative group/text transition-all duration-300">
                     <div className="px-8 lg:px-12 py-8 overflow-y-auto custom-scrollbar flex-1">
-                        {toolbarMode === 'fixed' && (
+                        {toolbarMode === 'fixed' && !isViewer && (
                             <FixedToolbar
                                 visible={!!(window.getSelection()?.toString())}
                                 criterios={criterios}
@@ -730,7 +735,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             <div className="w-16 h-px bg-accent-red/20 mx-auto mb-8" />
                             <div
                                 ref={textContainerRef}
-                                onMouseUp={handleTextSelection}
+                                onMouseUp={isViewer ? undefined : handleTextSelection}
                                 className={cn(
                                     'prose prose-slate max-w-none prose-p:leading-[1.7] prose-p:mb-5',
                                     'text-dark-gray font-serif text-lg sm:text-xl selection:bg-accent-red/10',
@@ -742,7 +747,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                             </div>
                         </div>
 
-                        {!readMode && (
+                        {!readMode && !isViewer && (
                             <div className="mt-6 pt-6 border-t border-gray-200/50 flex flex-col gap-6 max-w-4xl mx-auto w-full pb-12">
                                 <div className="flex items-center justify-between bg-white/20 p-6 rounded-3xl border border-gray-200/50 shadow-sm">
                                     <div className="flex items-center gap-4">
@@ -776,20 +781,22 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                         )}
                     </div>
 
-                    <FloatingToolbar
-                        visible={!!(highlightPopup?.visible && toolbarMode === 'floating')}
-                        x={highlightPopup?.x || 0}
-                        y={highlightPopup?.y || 0}
-                        target={highlightPopup?.target || 'texto'}
-                        targetId={highlightPopup?.targetId}
-                        criterios={criterios}
-                        formData={highlightFormData}
-                        setFormData={setHighlightFormData}
-                        onSubmit={handleAddHighlight}
-                        onClose={() => setHighlightPopup(null)}
-                        isDragging={isDragging}
-                        onDragStart={handleDragStart}
-                    />
+                    {!isViewer && (
+                        <FloatingToolbar
+                            visible={!!(highlightPopup?.visible && toolbarMode === 'floating')}
+                            x={highlightPopup?.x || 0}
+                            y={highlightPopup?.y || 0}
+                            target={highlightPopup?.target || 'texto'}
+                            targetId={highlightPopup?.targetId}
+                            criterios={criterios}
+                            formData={highlightFormData}
+                            setFormData={setHighlightFormData}
+                            onSubmit={handleAddHighlight}
+                            onClose={() => setHighlightPopup(null)}
+                            isDragging={isDragging}
+                            onDragStart={handleDragStart}
+                        />
+                    )}
                 </div>
 
                 {/* Coluna da Direita: Formulário */}
@@ -808,8 +815,9 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     notaIA={activeSkill?.score ?? 0}
                                     devolutivaIA={activeSkill?.comment ?? ''}
                                     renderTextWithHighlights={renderTextWithHighlights}
-                                    handleTextSelection={handleTextSelection}
+                                    handleTextSelection={isViewer ? () => {} : handleTextSelection}
                                     hideIaScore={globalHideIaScore}
+                                    isViewer={isViewer}
                                 />
                             )}
                         </form>
