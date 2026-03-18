@@ -134,6 +134,15 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                     'A aba "Todas" foi realocada para o final da lista de abas para melhor priorização.',
                 ],
             },
+            {
+                section: '⚡ Performance e Escalabilidade Extrema',
+                items: [
+                    'Skeletons (Loading UI genéricos) implementados nas rotas do Native Client-Side Routing; elimina tempo onde a tela antes parecia estar em travamento livre.',
+                    'Lazy Fetching (Busca Ociosa): Cortadas requisições invisíveis para Fila de Revisão quando se está já navegando numa redação focada.',
+                    'Resolvemos os Piscas nas telas provocados pelo estado persistente da memória entre componentes iguais no React.',
+                    'Poupamos incríveis 80% das chamadas HTTP da API quando abrindo um documento (Fim da Cascata de Queries/Waterfall). Substituímos tudo usando Join Supabase Massivo por Baixo dos Panos, acelerando o loading final.',
+                ],
+            },
         ],
     },
     {

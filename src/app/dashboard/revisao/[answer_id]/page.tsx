@@ -10,7 +10,7 @@ export default function CorrecaoDiretaPage() {
 
     return (
         <DashboardLayout>
-            <MesaCorretor initialAnswerId={answerId} />
+            <MesaCorretor key={answerId} initialAnswerId={answerId} />
         </DashboardLayout>
     );
 }

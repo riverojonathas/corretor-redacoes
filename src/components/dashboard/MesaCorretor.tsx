@@ -28,6 +28,7 @@ import { FloatingToolbar, FixedToolbar } from './HighlightTools';
 import { CriterioPanel } from './CriterioPanel';
 import { CriterioInfoModal } from './CriterioInfoModal';
 import { ExitConfirmModal } from './ExitConfirmModal';
+import { MesaCorretorSkeleton } from './MesaCorretorSkeleton';
 
 const defaultCriterios: Criterio[] = [
     { id: 1, name: 'Critério 1', desc: 'Domínio da norma culta', full_desc: '' },
@@ -42,7 +43,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const router = useRouter();
 
     // ── View State ──────────────────────────────────────────
-    const [view, setView] = useState<'list' | 'correction'>('list');
+    const [view, setView] = useState<'list' | 'correction'>(initialAnswerId ? 'correction' : 'list');
 
     // ── Lista com filtros server-side (hook) ────────────────
     const {
@@ -52,11 +53,11 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         filters,
         setFilters,
         loadMore,
-    } = useRedacoesList(user?.id);
+    } = useRedacoesList(user?.id, view === 'list');
 
     // ── Correction State ────────────────────────────────────
     const [redacao, setRedacao] = useState<Redacao | null>(null);
-    const [loadingRedacao, setLoadingRedacao] = useState(false);
+    const [loadingRedacao, setLoadingRedacao] = useState(!!initialAnswerId);
     const [notFoundError, setNotFoundError] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [pendingRoute, setPendingRoute] = useState<string | null>(null);
@@ -252,12 +253,15 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         setNotFoundError(false);
         try {
             const { data: redacaoData, error: redacaoError } = await supabase
-                .from('redacoes').select('id').eq('answer_id', answerId).single();
+                .from('redacoes')
+                .select('*, revisoes(*, revisao_destaques(*))')
+                .eq('answer_id', answerId)
+                .single();
+                
             if (redacaoError || !redacaoData) { setNotFoundError(true); return; }
-            const { data: revData } = await supabase
-                .from('revisoes').select('id')
-                .eq('redacao_id', redacaoData.id).single();
-            await handleSelectRedacao(redacaoData.id, revData?.id);
+            
+            const revData = Array.isArray(redacaoData.revisoes) ? redacaoData.revisoes[0] : redacaoData.revisoes;
+            await handleSelectRedacao(redacaoData.id, revData?.id, redacaoData, revData);
         } catch (err) {
             console.error('Erro ao buscar redação por answer_id:', err);
             setNotFoundError(true);
@@ -266,29 +270,41 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
         }
     };
 
-    const handleSelectRedacao = async (id: string, revisaoId?: string) => {
+    const handleSelectRedacao = async (id: string, revisaoId?: string, prefetchedRedacao?: any, prefetchedRev?: any) => {
         if (!user) return;
-
-        // ── Fase D: Tentar adquirir o lock ─────────────────
-        const lockResult = await acquireLock(id);
-        if (lockResult.status === 'blocked') {
-            setLockBlocked(true);
-            setView('correction');
-            toast.warning('⚠️ Esta redação está sendo revisada por outro corretor no momento.');
-            return;
-        }
-        if (lockResult.status === 'error') {
-            // Lock falhou mas permite continuar (degradação graciosa)
-            console.warn('Lock não adquirido:', lockResult.message);
-        }
-
-        setLockBlocked(false);
-        setView('correction');
         setLoadingRedacao(true);
+
         try {
-            const { data: redacaoData, error: redacaoError } = await supabase
-                .from('redacoes').select('*').eq('id', id).single();
-            if (redacaoError) throw redacaoError;
+            // ── Tentar adquirir o lock ─────────────────
+            const lockResult = await acquireLock(id);
+            if (lockResult.status === 'blocked') {
+                setLockBlocked(true);
+                setView('correction');
+                toast.warning('⚠️ Esta redação está sendo revisada por outro corretor no momento.');
+                return;
+            }
+            if (lockResult.status === 'error') {
+                console.warn('Lock não adquirido:', lockResult.message);
+            }
+
+            setLockBlocked(false);
+            setView('correction');
+
+            let redacaoData = prefetchedRedacao;
+            let revData = prefetchedRev;
+
+            if (!redacaoData) {
+                const { data, error } = await supabase
+                    .from('redacoes')
+                    .select('*, revisoes(*, revisao_destaques(*))')
+                    .eq('id', id)
+                    .single();
+                if (error) throw error;
+                redacaoData = data;
+                if (!revData && data.revisoes) {
+                    revData = Array.isArray(data.revisoes) ? data.revisoes[0] : data.revisoes;
+                }
+            }
 
             const { text: essayCleaned } = sanitizeTextWithHighlights(redacaoData.essay || '', []);
             let finalSkills = (redacaoData.evaluated_skills || []).map((s: any) => {
@@ -300,65 +316,61 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
             const processedRedacao = { ...redacaoData, essay: essayCleaned, evaluated_skills: finalSkills };
             setRedacao(processedRedacao);
 
-            if (revisaoId) {
+            if (revData) {
                 setRevisaoStatus(null); // reset enquanto carrega
-                const { data: revData, error: revError } = await supabase
-                    .from('revisoes').select('*, revisao_destaques(*)').eq('id', revisaoId).single();
-                if (!revError && revData) {
-                    const baseForm: Record<string, any> = {
-                        criterio_1_tema_1: revData.criterio_1_tema_1 || '', criterio_1_tema_2: revData.criterio_1_tema_2 || '',
-                        criterio_1_tema_3: revData.criterio_1_tema_3 || '', criterio_1_tema_4: revData.criterio_1_tema_4 || '',
-                        criterio_1_observacao: revData.criterio_1_observacao || '',
-                        criterio_2_tema_1: revData.criterio_2_tema_1 || '', criterio_2_tema_2: revData.criterio_2_tema_2 || '',
-                        criterio_2_tema_3: revData.criterio_2_tema_3 || '', criterio_2_tema_4: revData.criterio_2_tema_4 || '',
-                        criterio_2_observacao: revData.criterio_2_observacao || '',
-                        criterio_3_tema_1: revData.criterio_3_tema_1 || '', criterio_3_tema_2: revData.criterio_3_tema_2 || '',
-                        criterio_3_tema_3: revData.criterio_3_tema_3 || '', criterio_3_tema_4: revData.criterio_3_tema_4 || '',
-                        criterio_3_observacao: revData.criterio_3_observacao || '',
-                        criterio_4_tema_1: revData.criterio_4_tema_1 || '', criterio_4_tema_2: revData.criterio_4_tema_2 || '',
-                        criterio_4_tema_3: revData.criterio_4_tema_3 || '', criterio_4_tema_4: revData.criterio_4_tema_4 || '',
-                        criterio_4_observacao: revData.criterio_4_observacao || '',
-                        criterio_5_tema_1: revData.criterio_5_tema_1 || '', criterio_5_tema_2: revData.criterio_5_tema_2 || '',
-                        criterio_5_tema_3: revData.criterio_5_tema_3 || '', criterio_5_tema_4: revData.criterio_5_tema_4 || '',
-                        criterio_5_observacao: revData.criterio_5_observacao || '',
-                        comentario_geral: revData.comentario_geral || '',
-                        favorita: revData.favorita || false,
-                        suspeita_ia: revData.suspeita_ia || false,
-                        motivo_suspeita_ia: revData.motivo_suspeita_ia || ''
-                    };
-                    let dynamicData: any = {};
-                    if (revData.avaliacoes && Array.isArray(revData.avaliacoes)) {
-                        revData.avaliacoes.forEach((av: any) => {
-                            dynamicData[`criterio_${av.criterio_id}_tema_1`] = av.tema_1 || '';
-                            dynamicData[`criterio_${av.criterio_id}_tema_2`] = av.tema_2 || '';
-                            dynamicData[`criterio_${av.criterio_id}_tema_3`] = av.tema_3 || '';
-                            dynamicData[`criterio_${av.criterio_id}_observacao`] = av.observacao || '';
-                        });
-                    }
-                    const mergedForm = { ...baseForm, ...dynamicData };
-                    setFormData(mergedForm as any);
-
-                    const { text: cleanEssay, highlights: cleanHighlights } = sanitizeTextWithHighlights(
-                        redacaoData.essay,
-                        revData.revisao_destaques?.filter((h: any) => !h.target || h.target === 'texto') || []
-                    );
-                    const devHighlightsRaw = revData.revisao_destaques?.filter((h: any) => h.target === 'devolutiva') || [];
-                    let cleanDevHighlights: Highlight[] = [];
-                    const cleanSkills = (redacaoData.evaluated_skills || []).map((s: any, idx: number) => {
-                        if (!s.comment) return s;
-                        const skillHls = devHighlightsRaw.filter((h: any) => h.criterio_id === idx + 1);
-                        const { text: cleanComment, highlights: processedSkillHls } = sanitizeTextWithHighlights(s.comment, skillHls);
-                        cleanDevHighlights = [...cleanDevHighlights, ...processedSkillHls];
-                        return { ...s, comment: cleanComment };
+                const baseForm: Record<string, any> = {
+                    criterio_1_tema_1: revData.criterio_1_tema_1 || '', criterio_1_tema_2: revData.criterio_1_tema_2 || '',
+                    criterio_1_tema_3: revData.criterio_1_tema_3 || '', criterio_1_tema_4: revData.criterio_1_tema_4 || '',
+                    criterio_1_observacao: revData.criterio_1_observacao || '',
+                    criterio_2_tema_1: revData.criterio_2_tema_1 || '', criterio_2_tema_2: revData.criterio_2_tema_2 || '',
+                    criterio_2_tema_3: revData.criterio_2_tema_3 || '', criterio_2_tema_4: revData.criterio_2_tema_4 || '',
+                    criterio_2_observacao: revData.criterio_2_observacao || '',
+                    criterio_3_tema_1: revData.criterio_3_tema_1 || '', criterio_3_tema_2: revData.criterio_3_tema_2 || '',
+                    criterio_3_tema_3: revData.criterio_3_tema_3 || '', criterio_3_tema_4: revData.criterio_3_tema_4 || '',
+                    criterio_3_observacao: revData.criterio_3_observacao || '',
+                    criterio_4_tema_1: revData.criterio_4_tema_1 || '', criterio_4_tema_2: revData.criterio_4_tema_2 || '',
+                    criterio_4_tema_3: revData.criterio_4_tema_3 || '', criterio_4_tema_4: revData.criterio_4_tema_4 || '',
+                    criterio_4_observacao: revData.criterio_4_observacao || '',
+                    criterio_5_tema_1: revData.criterio_5_tema_1 || '', criterio_5_tema_2: revData.criterio_5_tema_2 || '',
+                    criterio_5_tema_3: revData.criterio_5_tema_3 || '', criterio_5_tema_4: revData.criterio_5_tema_4 || '',
+                    criterio_5_observacao: revData.criterio_5_observacao || '',
+                    comentario_geral: revData.comentario_geral || '',
+                    favorita: revData.favorita || false,
+                    suspeita_ia: revData.suspeita_ia || false,
+                    motivo_suspeita_ia: revData.motivo_suspeita_ia || ''
+                };
+                let dynamicData: any = {};
+                if (revData.avaliacoes && Array.isArray(revData.avaliacoes)) {
+                    revData.avaliacoes.forEach((av: any) => {
+                        dynamicData[`criterio_${av.criterio_id}_tema_1`] = av.tema_1 || '';
+                        dynamicData[`criterio_${av.criterio_id}_tema_2`] = av.tema_2 || '';
+                        dynamicData[`criterio_${av.criterio_id}_tema_3`] = av.tema_3 || '';
+                        dynamicData[`criterio_${av.criterio_id}_observacao`] = av.observacao || '';
                     });
-                    setRedacao({ ...processedRedacao, essay: cleanEssay, evaluated_skills: cleanSkills });
-                    const allHls = [...cleanHighlights, ...cleanDevHighlights];
-                    _setHighlights(allHls);
-                    syncPristine(mergedForm as any, allHls);
-                    // Armazenar o status da revisão carregada
-                    setRevisaoStatus((revData.status === 'concluida' ? 'concluida' : 'rascunho'));
-                    setReEditConfirmed(false);
                 }
+                const mergedForm = { ...baseForm, ...dynamicData };
+                setFormData(mergedForm as any);
+
+                const { text: cleanEssay, highlights: cleanHighlights } = sanitizeTextWithHighlights(
+                    redacaoData.essay,
+                    revData.revisao_destaques?.filter((h: any) => !h.target || h.target === 'texto') || []
+                );
+                const devHighlightsRaw = revData.revisao_destaques?.filter((h: any) => h.target === 'devolutiva') || [];
+                let cleanDevHighlights: Highlight[] = [];
+                const cleanSkills = (redacaoData.evaluated_skills || []).map((s: any, idx: number) => {
+                    if (!s.comment) return s;
+                    const skillHls = devHighlightsRaw.filter((h: any) => h.criterio_id === idx + 1);
+                    const { text: cleanComment, highlights: processedSkillHls } = sanitizeTextWithHighlights(s.comment, skillHls);
+                    cleanDevHighlights = [...cleanDevHighlights, ...processedSkillHls];
+                    return { ...s, comment: cleanComment };
+                });
+                setRedacao({ ...processedRedacao, essay: cleanEssay, evaluated_skills: cleanSkills });
+                const allHls = [...cleanHighlights, ...cleanDevHighlights];
+                _setHighlights(allHls);
+                syncPristine(mergedForm as any, allHls);
+                // Armazenar o status da revisão carregada
+                setRevisaoStatus((revData.status === 'concluida' ? 'concluida' : 'rascunho'));
+                setReEditConfirmed(false);
             } else {
                 resetForm();
                 setRevisaoStatus(null);
@@ -648,32 +660,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
 
     // ── Render: Loading skeleton ────────────────────────────
     if (loadingRedacao) {
-        return (
-            <div className="flex flex-col h-[calc(100vh-64px)] bg-white overflow-hidden animate-pulse">
-                <div className="bg-white border-b border-gray-100 flex items-center justify-between px-8 py-5 shadow-sm z-10">
-                    <div className="flex flex-col gap-3">
-                        <div className="h-7 w-64 bg-gray-100 rounded"></div>
-                        <div className="h-4 w-40 bg-gray-100 rounded"></div>
-                    </div>
-                    <div className="flex gap-3">
-                        <div className="h-10 w-28 bg-gray-100 rounded-xl"></div>
-                        <div className="h-10 w-32 bg-gray-100 rounded-xl"></div>
-                    </div>
-                </div>
-                <div className="flex flex-1 overflow-hidden">
-                    <div className="w-1/2 border-r border-gray-100 p-8 lg:px-12 bg-[#fdfcf8]">
-                        <div className="w-full flex justify-end mb-8"><div className="h-8 w-32 bg-gray-100 rounded-full border border-gray-200"></div></div>
-                        <div className="space-y-5 max-w-[70ch] mx-auto opacity-60">
-                            {[1, 2, 3, 4, 5, 6, 7].map(line => (<div key={line} className="h-6 bg-gray-200 rounded-sm w-full"></div>))}
-                        </div>
-                    </div>
-                    <div className="w-1/2 p-8 lg:px-12 bg-gray-50/50">
-                        <div className="flex bg-gray-100 p-1.5 rounded-lg space-x-2 mb-10 h-12 w-full"></div>
-                        <div className="space-y-8">{[1, 2, 3].map(i => (<div key={i}><div className="h-4 w-48 bg-gray-100 rounded mb-3"></div><div className="h-14 bg-gray-100 rounded-xl w-full border border-gray-200"></div></div>))}</div>
-                    </div>
-                </div>
-            </div>
-        );
+        return <MesaCorretorSkeleton />;
     }
 
     // ── Render: Error ───────────────────────────────────────

@@ -6,7 +6,7 @@ import { MesaCorretor } from '@/components/dashboard/MesaCorretor';
 export default function CorrecaoPage() {
     return (
         <DashboardLayout>
-            <MesaCorretor />
+            <MesaCorretor key="fila" />
         </DashboardLayout>
     );
 }

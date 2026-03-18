@@ -15,7 +15,7 @@ export interface ListFilters {
 
 const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'pendente' };
 
-export function useRedacoesList(userId: string | undefined) {
+export function useRedacoesList(userId: string | undefined, shouldFetch: boolean = true) {
     const [lista, setLista] = useState<RedacaoListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [hasMore, setHasMore] = useState(false);
@@ -39,7 +39,7 @@ export function useRedacoesList(userId: string | undefined) {
 
     // ── Fetch com filtros server-side e paginação ──────────
     const fetchLista = useCallback(async (currentPage: number, append = false) => {
-        if (!userId) return;
+        if (!userId || !shouldFetch) return;
         setLoading(true);
         try {
             let selectString = 'id, title, nick, extra_fields, answer_id, locked_by, locked_at';
@@ -109,11 +109,11 @@ export function useRedacoesList(userId: string | undefined) {
         } finally {
             setLoading(false);
         }
-    }, [userId, debouncedFilters]);
+    }, [userId, debouncedFilters, shouldFetch]);
 
     useEffect(() => {
-        if (userId) fetchLista(0, false);
-    }, [fetchLista, userId]);
+        if (userId && shouldFetch) fetchLista(0, false);
+    }, [fetchLista, userId, shouldFetch]);
 
     const loadMore = useCallback(() => {
         const nextPage = page + 1;

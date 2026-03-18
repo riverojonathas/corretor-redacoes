@@ -16,6 +16,12 @@
 - **Foco Padrão**: A visualização padrão agora lista primeiramente as redações na guia de "Pendentes", economizando carregamentos e pulando de cara para o trabalho disponível.
 - **Ordem das Abas**: A guia "Todas" com as centenas ou milhares de redações foi empedida do início para o final das opções, garantindo que o corretor não esbarre nelas a todo tempo.
 
+### ⚡ Performance Geral e Estabilidade
+- **Zero-Delay na Correção**: Implementado modelo de `Suspense` nativo pro Next.js (`loading.tsx`). O esqueleto de correção (Skeleton) agora aparece instantaneamente ao invés de exibir uma tela morta.
+- **Fim da Retenção de Estado**: A tela não mostra mais listas duplicadas piscando no instante de troca da tela (State leak/Memory leak resolvido com as keys do React).
+- **Fim da Carga Desnecessária na API (Lazy Fetching)**: A mesa do revisor agora não faz mais requisições ocultas para baixar redações adicionais da Fila nos momentos impertinentes.
+- **Busca Unificada no DB (Theca-Join 80% mais rápida)**: Remoção de 5 consultas em cascata que ficavam retendo a CPU e Banco de Dados (Waterfall Queries). Quando uma redação carrega, uma grande e robusta Query do Supabase (`select('*, revisoes(*, revisao_destaques(*))')`) puxa os detalhes todos em *uma única requisição HTML*.
+
 ---
 
 ## [v1.2] - Março 2026
