@@ -89,6 +89,54 @@ export const EXAMPLES_FEATURES: FeaturePill[] = [
 
 export const EXAMPLES_RELEASES: ReleaseNote[] = [
     {
+        id: 'v1.3',
+        version: 'v1.3',
+        date: 'Abril 2026',
+        title: 'Avaliação IA Oculta e Correção Manual Obrigatória',
+        description: 'Implementada funcionalidade para ocultar a nota da IA, forçando uma correção cega para evitar vieses. Adicionada página de Administração.',
+        category: 'nova-feature',
+        changes: [
+            {
+                section: '👀 Avaliação IA Oculta (Correção Cega)',
+                items: [
+                    'A avaliação da nota IA foi movida para o topo, sendo agora a primeira ação obrigatória de cada critério.',
+                    'Nova flag global ativável por Administradores para ocultar a nota sugerida pela IA.',
+                    'Corretores não conseguem ver a nota original da IA antes de atribuírem a sua própria nota manual de 0 a 10.',
+                    'A aba de avaliação final do critério exige a digitação da nota do corretor (com duas casas decimais).',
+                    'Após a submissão, a nota da IA é revelada lado-a-lado com a do corretor.',
+                ],
+            },
+            {
+                section: '🤖 Preenchimento Automático de Adequação',
+                items: [
+                    'A classificação do desvio (Adequada, 1 nível abaixo, 2 níveis acima, etc.) agora é calculada automaticamente baseando-se na diferença matemática entre a nota do Corretor e a da IA.',
+                    'Limites rigorosos integrados diretamente no preenchimento dos temas de correção.',
+                ],
+            },
+            {
+                section: '🛡️ Nova Aba de Administração',
+                items: [
+                    'Adicionada aba exclusiva "Administração" em Configurações, visível apenas para perfis Administradores.',
+                    'Controle global de toggles da plataforma (como Ocultar Nota IA) com impacto instantâneo em todos os corretores.',
+                ],
+            },
+            {
+                section: '⚙️ Atualizações Estruturais no Banco de Dados',
+                items: [
+                    'Criação da tabela "app_settings" para armazenar flags de configuração da plataforma.',
+                    'Inclusão dos campos de "criterio_X_nota_atribuida" na tabela de revisões para guardar o valor numérico exato atribuído pelos corretores.',
+                ],
+            },
+            {
+                section: '📑 Fila de Revisão Otimizada',
+                items: [
+                    'A Fila de Revisão agora exibe por padrão apenas as redações "Pendentes", direcionando o foco do revisor.',
+                    'A aba "Todas" foi realocada para o final da lista de abas para melhor priorização.',
+                ],
+            },
+        ],
+    },
+    {
         id: 'v1.2',
         version: 'v1.2',
         date: 'Março 2026',

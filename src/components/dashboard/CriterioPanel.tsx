@@ -18,16 +18,17 @@ interface CriterioPanelProps {
     devolutivaIA: string;
     renderTextWithHighlights: (text: string, isDevolutiva?: boolean, criterioId?: number) => React.ReactNode;
     handleTextSelection: (e: React.MouseEvent) => void;
+    hideIaScore?: boolean;
 }
 
 const correctOptions = ['Satisfatório', 'Vago', 'Incompleto', 'Com erros'];
 const incorrectOptions = ['Identificou incorretamente', 'Não identificou', 'Alucinação', 'Outro'];
 
 const temas = [
+    { id: 4, label: 'Avaliação da nota atribuída pela IA' },
     { id: 1, label: 'Identificação de pontos positivos' },
     { id: 2, label: 'Identificação do problema que levou à perda de nota' },
     { id: 3, label: 'Sugestão de melhoria ao estudante' },
-    { id: 4, label: 'Avaliação da nota atribuída pela IA' },
 ];
 
 export function CriterioPanel({
@@ -42,7 +43,12 @@ export function CriterioPanel({
     devolutivaIA,
     renderTextWithHighlights,
     handleTextSelection,
+    hideIaScore = false,
 }: CriterioPanelProps) {
+
+    const notaAtribuidaField = `criterio_${c.id}_nota_atribuida`;
+    const notaAtribuida = (formData as any)[notaAtribuidaField];
+    const isScoreHiddenRef = hideIaScore && (notaAtribuida === undefined || notaAtribuida === null || notaAtribuida === '');
 
     const getStatus = (val: string, isScoreTheme: boolean) => {
         if (val === 'Outro') return 'info';
@@ -87,7 +93,9 @@ export function CriterioPanel({
                     )}
                 </div>
                 <div className="bg-accent-red/5 px-4 py-1.5 rounded-full border border-accent-red/10 shrink-0">
-                    <span className="text-[11px] font-black text-accent-red uppercase tracking-wider">Nota IA: {notaIA}</span>
+                    <span className="text-[11px] font-black text-accent-red uppercase tracking-wider">
+                        Nota IA: {isScoreHiddenRef ? 'Oculta' : notaIA}
+                    </span>
                 </div>
             </div>
 
@@ -137,9 +145,13 @@ export function CriterioPanel({
                                 const handleSelect = (opt: string) => {
                                     const newFormData = { ...formData, [fieldName]: opt };
                                     setFormData(newFormData);
-                                    const nextTema = temas.find(
-                                        (t) => t.id > tema.id && !(newFormData as any)[`criterio_${c.id}_tema_${t.id}`]
+                                    
+                                    // Encontrar o próximo tema na ordem do array que ainda não foi preenchido
+                                    const currentIndex = temas.findIndex(t => t.id === tema.id);
+                                    const nextTema = temas.slice(currentIndex + 1).find(
+                                        (t) => !(newFormData as any)[`criterio_${c.id}_tema_${t.id}`]
                                     );
+                                    
                                     setOpenTema((prev) => ({ ...prev, [c.id]: nextTema?.id ?? null }));
                                 };
 
@@ -201,71 +213,153 @@ export function CriterioPanel({
                                                 </span>
                                             </div>
                                             {isDone && !isOpen && (
-                                                <span
-                                                    className={cn(
-                                                        'text-[12px] font-bold px-3 py-1 rounded-full border transition-all',
-                                                        getStatus(currentValue, isScoreTheme) === 'success'
-                                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                                                            : getStatus(currentValue, isScoreTheme) === 'warning'
-                                                                ? 'text-amber-700 bg-amber-50 border-amber-200'
-                                                                : getStatus(currentValue, isScoreTheme) === 'info'
-                                                                    ? 'text-blue-700 bg-blue-50 border-blue-200'
-                                                                    : 'text-rose-700 bg-rose-50 border-rose-200'
+                                                <div className="flex items-center gap-2">
+                                                    {isScoreTheme && notaAtribuida !== undefined && notaAtribuida !== null && notaAtribuida !== '' && (
+                                                        <span className="text-[12px] font-bold px-3 py-1 rounded-full border text-gray-700 bg-gray-50 border-gray-200">
+                                                            Nota Corretor: {notaAtribuida}
+                                                        </span>
                                                     )}
-                                                >
-                                                    {currentValue}
-                                                </span>
+                                                    <span
+                                                        className={cn(
+                                                            'text-[12px] font-bold px-3 py-1 rounded-full border transition-all',
+                                                            getStatus(currentValue, isScoreTheme) === 'success'
+                                                                ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                                : getStatus(currentValue, isScoreTheme) === 'warning'
+                                                                    ? 'text-amber-700 bg-amber-50 border-amber-200'
+                                                                    : getStatus(currentValue, isScoreTheme) === 'info'
+                                                                        ? 'text-blue-700 bg-blue-50 border-blue-200'
+                                                                        : 'text-rose-700 bg-rose-50 border-rose-200'
+                                                        )}
+                                                    >
+                                                        {currentValue}
+                                                    </span>
+                                                </div>
                                             )}
                                         </button>
 
                                         {/* Corpo expansível */}
                                         {isOpen && (
                                             <div className="px-5 pb-5 flex flex-wrap items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                {currentCorrectOptions.map((opt) => (
-                                                    <button
-                                                        key={opt}
-                                                        type="button"
-                                                        onClick={() => handleSelect(opt)}
-                                                        className={cn(
-                                                            'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
-                                                            currentValue === opt
-                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
-                                                                : 'bg-transparent text-gray-500 border-[#eee9df] hover:border-emerald-200 hover:text-emerald-600'
+                                                {isScoreTheme && isScoreHiddenRef ? (
+                                                    <div className="flex flex-col gap-3 w-full">
+                                                        <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                                                            Atribuir Nota Manualmente (0 a 10)
+                                                        </label>
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                type="number"
+                                                                step="0.01"
+                                                                min="0"
+                                                                max="10"
+                                                                id={`input-nota-${c.id}`}
+                                                                className="w-32 bg-white/40 border border-[#eee9df] rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-accent-red/20 focus:border-accent-red/30 outline-none transition-all"
+                                                                placeholder="Ex: 8.5"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const input = document.getElementById(`input-nota-${c.id}`) as HTMLInputElement;
+                                                                    if (!input || !input.value) return;
+                                                                    const val = parseFloat(input.value);
+                                                                    if (isNaN(val) || val < 0 || val > 10) return;
+                                                                    
+                                                                    const diff = notaIA - val;
+                                                                    let status = '';
+                                                                    if (diff >= -0.75 && diff <= 0.75) status = 'Adequada';
+                                                                    else if (diff >= -1.75 && diff <= -0.76) status = '1 nível abaixo';
+                                                                    else if (diff >= 0.76 && diff <= 1.75) status = '1 nível acima';
+                                                                    else if (diff >= -2.50 && diff <= -1.76) status = '2 níveis abaixo';
+                                                                    else if (diff >= 1.76 && diff <= 2.50) status = '2 níveis acima';
+                                                                    else if (diff <= -2.51) status = 'mais de dois níveis abaixo';
+                                                                    else if (diff >= 2.51) status = 'mais de dois níveis acima';
+
+                                                                    const newFormData = { 
+                                                                        ...formData, 
+                                                                        [fieldName]: status,
+                                                                        [notaAtribuidaField]: val
+                                                                    };
+                                                                    setFormData(newFormData);
+                                                                    
+                                                                    const currentIndex = temas.findIndex(t => t.id === tema.id);
+                                                                    const nextTema = temas.slice(currentIndex + 1).find(
+                                                                        (t) => !(newFormData as any)[`criterio_${c.id}_tema_${t.id}`]
+                                                                    );
+                                                                    
+                                                                    setOpenTema((prev) => ({ ...prev, [c.id]: nextTema?.id ?? null }));
+                                                                }}
+                                                                className="px-4 py-2 bg-dark-gray text-white rounded-xl text-xs font-bold hover:bg-black transition-all"
+                                                            >
+                                                                Salvar Nota
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        {isScoreTheme && notaAtribuida !== undefined && notaAtribuida !== null && notaAtribuida !== '' && (
+                                                            <div className="w-full flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-bold text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200 inline-block">
+                                                                    Nota Corretor: {notaAtribuida} <span className="text-gray-400 mx-1">|</span> Nota IA: {notaIA}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        // Limpa a nota atribuída para poder re-avaliar cegamente se quiser
+                                                                        const newFormData = { ...formData, [notaAtribuidaField]: '' };
+                                                                        setFormData(newFormData);
+                                                                    }}
+                                                                    className="text-xs text-blue-500 hover:text-blue-700 underline font-semibold"
+                                                                >
+                                                                    Limpar Nota e Refazer
+                                                                </button>
+                                                            </div>
                                                         )}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
-                                                <div className="w-px h-4 bg-[#eee9df] mx-1" />
-                                                {currentIncorrectOptions.map((opt) => {
-                                                    const status = getStatus(opt, isScoreTheme);
-                                                    return (
-                                                        <button
-                                                            key={opt}
-                                                            type="button"
-                                                            onClick={() => handleSelect(opt)}
-                                                            className={cn(
-                                                                'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
-                                                                currentValue === opt
-                                                                    ? status === 'warning'
-                                                                        ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm'
-                                                                        : status === 'info'
-                                                                            ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
-                                                                            : 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
-                                                                    : 'bg-transparent text-gray-500 border-[#eee9df]',
-                                                                currentValue !== opt && (
-                                                                    status === 'warning'
-                                                                        ? 'hover:border-amber-200 hover:text-amber-600'
-                                                                        : status === 'info'
-                                                                            ? 'hover:border-blue-200 hover:text-blue-600'
-                                                                            : 'hover:border-rose-200 hover:text-rose-600'
-                                                                )
-                                                            )}
-                                                        >
-                                                            {opt}
-                                                        </button>
-                                                    );
-                                                })}
+                                                        {currentCorrectOptions.map((opt) => (
+                                                            <button
+                                                                key={opt}
+                                                                type="button"
+                                                                onClick={() => handleSelect(opt)}
+                                                                className={cn(
+                                                                    'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
+                                                                    currentValue === opt
+                                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm'
+                                                                        : 'bg-transparent text-gray-500 border-[#eee9df] hover:border-emerald-200 hover:text-emerald-600'
+                                                                )}
+                                                            >
+                                                                {opt}
+                                                            </button>
+                                                        ))}
+                                                        <div className="w-px h-4 bg-[#eee9df] mx-1" />
+                                                        {currentIncorrectOptions.map((opt) => {
+                                                            const status = getStatus(opt, isScoreTheme);
+                                                            return (
+                                                                <button
+                                                                    key={opt}
+                                                                    type="button"
+                                                                    onClick={() => handleSelect(opt)}
+                                                                    className={cn(
+                                                                        'px-3 py-1.5 rounded-full text-[12px] font-bold transition-all border',
+                                                                        currentValue === opt
+                                                                            ? status === 'warning'
+                                                                                ? 'bg-amber-50 text-amber-700 border-amber-200 shadow-sm'
+                                                                                : status === 'info'
+                                                                                    ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm'
+                                                                                    : 'bg-rose-50 text-rose-700 border-rose-200 shadow-sm'
+                                                                            : 'bg-transparent text-gray-500 border-[#eee9df]',
+                                                                        currentValue !== opt && (
+                                                                            status === 'warning'
+                                                                                ? 'hover:border-amber-200 hover:text-amber-600'
+                                                                                : status === 'info'
+                                                                                    ? 'hover:border-blue-200 hover:text-blue-600'
+                                                                                    : 'hover:border-rose-200 hover:text-rose-600'
+                                                                        )
+                                                                    )}
+                                                                >
+                                                                    {opt}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </>
+                                                )}
                                             </div>
                                         )}
                                     </div>

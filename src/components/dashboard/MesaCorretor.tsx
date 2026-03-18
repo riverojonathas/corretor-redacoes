@@ -136,6 +136,22 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     const [isInfoModalOpen, setIsInfoModalOpen] = useState<boolean>(false);
     const [openTema, setOpenTema] = useState<Record<number, number | null>>({});
 
+    // ── Global Config State ─────────────────────────────────
+    const [globalHideIaScore, setGlobalHideIaScore] = useState(false);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            if (!supabase) return;
+            try {
+                const { data } = await supabase.from('app_settings').select('hide_ia_score').eq('id', 'global').single();
+                if (data) setGlobalHideIaScore(data.hide_ia_score);
+            } catch (err) {
+                console.error('Error fetching settings', err);
+            }
+        };
+        fetchSettings();
+    }, []);
+
     // ── Criterios (memoized) ────────────────────────────────
     const criterios = React.useMemo(() => {
         if (redacao?.assessed_skills && redacao.assessed_skills.length > 0) {
@@ -806,6 +822,7 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
                                     devolutivaIA={activeSkill?.comment ?? ''}
                                     renderTextWithHighlights={renderTextWithHighlights}
                                     handleTextSelection={handleTextSelection}
+                                    hideIaScore={globalHideIaScore}
                                 />
                             )}
                         </form>

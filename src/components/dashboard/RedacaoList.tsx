@@ -82,7 +82,7 @@ export function RedacaoList({
 
             {/* Tabs de Status */}
             <div className="flex items-center gap-2 border-b border-gray-200 pb-4 overflow-x-auto custom-scrollbar">
-                {(['todas', 'pendente', 'rascunho', 'concluida'] as FilterStatus[]).map(status => (
+                {(['pendente', 'rascunho', 'concluida', 'todas'] as FilterStatus[]).map(status => (
                     <button
                         key={status}
                         onClick={() => setField('status', status)}

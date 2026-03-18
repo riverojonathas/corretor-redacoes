@@ -1,6 +1,26 @@
-# RELEASES_2.md - Março 2026
+# RELEASES_2.md - Histórico
 
-## 🚀 Melhorias na Fila de Revisão e Mesa do Corretor
+## [v1.3] - Abril 2026
+
+### 👀 Avaliação IA Oculta (Correção Cega)
+- **Primeiro Critério**: A avaliação da nota IA foi movida para ser o primeiro item de cada competência, garantindo que seja a primeira decisão do corretor.
+- **Flag Global**: Nova configuração ativável por Administradores para ocultar a nota sugerida pela IA, evitando vieses durante a correção.
+- **Auto-preenchimento**: Ao invés de opções, o corretor informa manualmente a nota (de 0 a 10). O avaliador ajusta "Adequada", "1 nível abaixo", etc., calculando automaticamente o desvio (Diferença = Nota IA - Nota Corretor).
+
+### 🛡️ Administração e Banco de Dados
+- **Painel Admin**: Adicionada uma aba "Administração" nas configurações do sistema (acesso garantido a `cargo === 'admin'`).
+- **Tabela de Configurações**: Criação de `app_settings` no Supabase para controlar o estado global de opções.
+- **Auditoria Fiel**: Novos campos em `revisoes` que guardam exatamente o número atribuído nos critérios do revisor.
+
+### 📑 Fila de Revisão Otimizada
+- **Foco Padrão**: A visualização padrão agora lista primeiramente as redações na guia de "Pendentes", economizando carregamentos e pulando de cara para o trabalho disponível.
+- **Ordem das Abas**: A guia "Todas" com as centenas ou milhares de redações foi empedida do início para o final das opções, garantindo que o corretor não esbarre nelas a todo tempo.
+
+---
+
+## [v1.2] - Março 2026
+
+### 🚀 Melhorias na Fila de Revisão e Mesa do Corretor
 
 ### 📋 Critérios Dinâmicos (Competências)
 Agora o sistema não está restrito às 5 competências fixas. Os critérios são carregados dinamicamente a partir dos dados da redação (`assessed_skills`).

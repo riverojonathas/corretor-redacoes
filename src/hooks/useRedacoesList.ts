@@ -13,7 +13,7 @@ export interface ListFilters {
     status: FilterStatus;
 }
 
-const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'todas' };
+const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'pendente' };
 
 export function useRedacoesList(userId: string | undefined) {
     const [lista, setLista] = useState<RedacaoListItem[]>([]);

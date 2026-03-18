@@ -7,11 +7,14 @@ import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { SecuritySettings } from '@/components/settings/SecuritySettings';
 import { WorkspaceSettings } from '@/components/settings/WorkspaceSettings';
 import { MyChamados } from '@/components/settings/MyChamados';
+import { AdminSettings } from '@/components/settings/AdminSettings';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
-type Tab = 'profile' | 'security' | 'workspace' | 'chamados';
+type Tab = 'profile' | 'security' | 'workspace' | 'chamados' | 'admin';
 
 export default function SettingsPage() {
+    const { cargo } = useAuth();
     const [activeTab, setActiveTab] = useState<Tab>('profile');
 
     const tabs: { id: Tab; label: string; icon: React.ElementType }[] = [
@@ -20,6 +23,10 @@ export default function SettingsPage() {
         { id: 'workspace', label: 'Mesa de Correção', icon: Layout },
         { id: 'chamados', label: 'Meus Chamados', icon: LifeBuoy },
     ];
+
+    if (cargo === 'admin') {
+        tabs.push({ id: 'admin', label: 'Administração', icon: Shield });
+    }
 
     return (
         <DashboardLayout>
@@ -74,6 +81,7 @@ export default function SettingsPage() {
                                 <MyChamados />
                             </div>
                         )}
+                        {activeTab === 'admin' && cargo === 'admin' && <AdminSettings />}
                     </div>
 
                 </div>

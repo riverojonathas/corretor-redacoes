@@ -61,26 +61,31 @@ Este documento contém a estrutura exata do banco de dados relacional no Supabas
 | `data_correcao` | `timestamptz` | Data da revisão manual |
 | `redacao_id` | `uuid` | Foreign Key -> `redacoes.id` |
 | `corretor_id` | `uuid` | Foreign Key -> `perfis.id` |
+| `criterio_1_nota_atribuida` | `numeric` | Nota atribuída manualmente pelo corretor (0 a 10) |
 | `criterio_1_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_1_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_1_tema_3` | `text` | Avaliação: Sugestão de melhoria |
 | `criterio_1_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_1_observacao` | `text` | Observação livre |
+| `criterio_2_nota_atribuida` | `numeric` | Nota atribuída manualmente pelo corretor (0 a 10) |
 | `criterio_2_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_2_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_2_tema_3` | `text` | Avaliação: Sugestão de melhoria |
 | `criterio_2_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_2_observacao` | `text` | Observação livre |
+| `criterio_3_nota_atribuida` | `numeric` | Nota atribuída manualmente pelo corretor (0 a 10) |
 | `criterio_3_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_3_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_3_tema_3` | `text` | Avaliação: Sugestão de melhoria |
 | `criterio_3_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_3_observacao` | `text` | Observação livre |
+| `criterio_4_nota_atribuida` | `numeric` | Nota atribuída manualmente pelo corretor (0 a 10) |
 | `criterio_4_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_4_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_4_tema_3` | `text` | Avaliação: Sugestão de melhoria |
 | `criterio_4_tema_4` | `text` | Avaliação: Adequação da nota IA |
 | `criterio_4_observacao` | `text` | Observação livre |
+| `criterio_5_nota_atribuida` | `numeric` | Nota atribuída manualmente pelo corretor (0 a 10) |
 | `criterio_5_tema_1` | `text` | Avaliação: Identificação de pontos positivos |
 | `criterio_5_tema_2` | `text` | Avaliação: Identificação do problema |
 | `criterio_5_tema_3` | `text` | Avaliação: Sugestão de melhoria |
@@ -369,3 +374,49 @@ CREATE INDEX IF NOT EXISTS idx_redacoes_tema_trgm ON public.redacoes USING gin (
 | `idx_redacoes_title_trgm` | `redacoes` | `title` | Busca por palavra no título da redação |
 | `idx_redacoes_nick_trgm` | `redacoes` | `nick` | Busca por fragmentos do apelido do autor |
 | `idx_redacoes_tema_trgm` | `redacoes` | `extra_fields->>'redacao_tema'` | Busca por palavras chave no modelo/tema da redação |
+
+---
+
+## 9. Tabelas Adicionais
+
+### `app_settings`
+Armazena configurações globais do sistema.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `id` | `text` | Primary Key (Ex: 'global') |
+| `hide_ia_score` | `boolean` | Flag que indica se a nota da IA deve ser ocultada para os corretores (padrão: `false`) |
+| `updated_at` | `timestamptz` | Data da última atualização |
+
+### Script SQL para criar a tabela e novos campos (Fase F - Ocultar Nota IA)
+```sql
+-- Criar tabela de configurações globais
+CREATE TABLE public.app_settings (
+    id text NOT NULL DEFAULT 'global'::text,
+    hide_ia_score boolean NOT NULL DEFAULT false,
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    CONSTRAINT app_settings_pkey PRIMARY KEY (id)
+);
+
+-- Inserir configuração global inicial
+INSERT INTO public.app_settings (id, hide_ia_score) VALUES ('global', false) ON CONFLICT (id) DO NOTHING;
+
+-- Habilitar RLS
+ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
+
+-- Políticas:
+-- Todos podem ler
+CREATE POLICY "Qualquer um pode ler app_settings" ON public.app_settings FOR SELECT USING (true);
+-- Apenas admin pode modificar (precisa de ALL para upsert)
+CREATE POLICY "Admins all" ON public.app_settings FOR ALL USING (
+  exists (select 1 from public.perfis where id = auth.uid() and cargo = 'admin')
+);
+
+-- Adicionar colunas na tabela revisoes
+ALTER TABLE public.revisoes
+  ADD COLUMN IF NOT EXISTS criterio_1_nota_atribuida numeric,
+  ADD COLUMN IF NOT EXISTS criterio_2_nota_atribuida numeric,
+  ADD COLUMN IF NOT EXISTS criterio_3_nota_atribuida numeric,
+  ADD COLUMN IF NOT EXISTS criterio_4_nota_atribuida numeric,
+  ADD COLUMN IF NOT EXISTS criterio_5_nota_atribuida numeric;
+```
