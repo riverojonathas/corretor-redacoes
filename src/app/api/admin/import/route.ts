@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
         for (let i = 0; i < rows.length; i += BATCH_SIZE) {
             const batch = rows.slice(i, i + BATCH_SIZE);
-            const { error } = await supabaseAdmin.from('redacoes').insert(batch);
+            const { error } = await supabaseAdmin.from('redacoes').upsert(batch, { onConflict: 'answer_id' });
 
             if (error) {
                 console.error(`Erro no lote ${i / BATCH_SIZE + 1}:`, error);

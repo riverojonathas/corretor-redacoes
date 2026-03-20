@@ -34,7 +34,8 @@ export default function AdminUploadPage() {
             skipEmptyLines: true,
             complete: async (results) => {
                 try {
-                    const formattedData = results.data.map((rawRow: any) => {
+                const importBatch = `web-upload-${new Date().toISOString().split('.')[0]}`;
+                const formattedData = results.data.map((rawRow: any) => {
                         const row: any = {};
                         Object.keys(rawRow).forEach(k => { row[k.trim()] = rawRow[k]; });
 
@@ -45,32 +46,72 @@ export default function AdminUploadPage() {
                             return isNaN(num) ? 0 : num;
                         }
 
-                        const evaluated_skills = [];
-                        for (let i = 0; i < 5; i++) {
-                            evaluated_skills.push({
-                                score: parseNota(row[`evaluated_skills[${i}].score`]),
-                                comment: row[`evaluated_skills[${i}].comment`] || '',
-                                statement: row[`evaluated_skills[${i}].statement`] || ''
-                            });
+                        /** Tenta fazer JSON.parse de uma string, retorna null se falhar. */
+                        function tryParseJson(value?: string): any | null {
+                            if (!value || typeof value !== 'string') return null;
+                            try {
+                                const parsed = JSON.parse(value);
+                                return (typeof parsed === 'object') ? parsed : null;
+                            } catch {
+                                return null;
+                            }
                         }
 
-                        const assessed_skills = [];
-                        for (let i = 0; i < 5; i++) {
-                            if (row[`assessed_skills[${i}].statement`] || row[`assessed_skills[${i}].description`]) {
-                                assessed_skills.push({
-                                    statement: row[`assessed_skills[${i}].statement`] || '',
-                                    description: row[`assessed_skills[${i}].description`] || ''
+                        // ── evaluated_skills ──
+                        let evaluated_skills: any[];
+                        const parsedEs = tryParseJson(row['evaluated_skills']);
+                        if (parsedEs && Array.isArray(parsedEs)) {
+                            evaluated_skills = parsedEs;
+                        } else {
+                            evaluated_skills = [];
+                            for (let i = 0; i < 5; i++) {
+                                evaluated_skills.push({
+                                    score: parseNota(row[`evaluated_skills[${i}].score`]),
+                                    comment: row[`evaluated_skills[${i}].comment`] || '',
+                                    statement: row[`evaluated_skills[${i}].statement`] || ''
                                 });
                             }
                         }
 
-                        const extra_fields = {
-                            redacao_tema: row['extra_fields.redacao_tema'] || '',
-                            redacao_ano_serie: row['extra_fields.redacao_ano_serie'] || '',
-                            redacao_zerada: row['extra_fields.redacao_zerada'] || '',
-                            cd_tipo_ensino: row['extra_fields.cd_tipo_ensino'] || '',
-                            nm_tipo_ensino: row['extra_fields.nm_tipo_ensino'] || ''
-                        };
+                        // ── assessed_skills ──
+                        let assessed_skills: any[];
+                        const parsedAs = tryParseJson(row['assessed_skills']);
+                        if (parsedAs && Array.isArray(parsedAs)) {
+                            assessed_skills = parsedAs;
+                        } else {
+                            assessed_skills = [];
+                            for (let i = 0; i < 5; i++) {
+                                if (row[`assessed_skills[${i}].statement`] || row[`assessed_skills[${i}].description`]) {
+                                    assessed_skills.push({
+                                        statement: row[`assessed_skills[${i}].statement`] || '',
+                                        description: row[`assessed_skills[${i}].description`] || ''
+                                    });
+                                }
+                            }
+                        }
+
+                        // ── extra_fields ──
+                        let extra_fields: Record<string, any>;
+                        const parsedEf = tryParseJson(row['extra_fields']);
+                        if (parsedEf && typeof parsedEf === 'object' && !Array.isArray(parsedEf)) {
+                            extra_fields = parsedEf;
+                        } else {
+                            extra_fields = {
+                                redacao_tema: row['extra_fields.redacao_tema'] || '',
+                                redacao_ano_serie: row['extra_fields.redacao_ano_serie'] || '',
+                                redacao_zerada: row['extra_fields.redacao_zerada'] || '',
+                                cd_tipo_ensino: row['extra_fields.cd_tipo_ensino'] || '',
+                                nm_tipo_ensino: row['extra_fields.nm_tipo_ensino'] || ''
+                            };
+                        }
+
+                        // Absorve tipo_turma no extra_fields, se presente
+                        if (row['tipo_turma']) {
+                            extra_fields.tipo_turma = row['tipo_turma'];
+                        }
+
+                        // Adiciona o identificador do lote para reversão fácil
+                        extra_fields.import_batch = importBatch;
 
                         return {
                             internal_id: row.internal_id || row.id_redacao,
@@ -82,7 +123,7 @@ export default function AdminUploadPage() {
                             title: row.title || row.titulo,
                             essay: row.essay || row.texto,
                             genre: row.genre,
-                            statement: row['evaluated_skills[0].statement'] || row.statement || '',
+                            statement: row.statement || (evaluated_skills[0]?.statement) || '',
                             support_text: row.support_text || '',
                             consumer_init: row.ConsumerInit && !isNaN(Date.parse(row.ConsumerInit)) ? new Date(row.ConsumerInit).toISOString() : null,
                             consumer_finish: row.ConsumerFinish && !isNaN(Date.parse(row.ConsumerFinish)) ? new Date(row.ConsumerFinish).toISOString() : null,

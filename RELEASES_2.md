@@ -1,5 +1,33 @@
 # RELEASES_2.md - Histórico
 
+## [v1.4] - Março 2026
+
+### 🎫 Gestão de Propostas por Task ID
+- **Nova funcionalidade**: Administradores podem criar Propostas numeradas e vincular Task IDs a elas, classificando as redações por número de proposta.
+- **Reversível**: Remover um Task ID de uma proposta não apaga a proposta nem as redações — basta `remove` e `add` para reatribuir.
+- **Unicidade garantida**: Um Task ID só pode pertencer a uma proposta por vez (`UNIQUE` no banco), evitando duplo vínculo.
+
+### ⚙️ Painel Admin — Aba "Propostas"
+- **Nova aba** em Configurações → Propostas (visível apenas para Administradores).
+- Criar propostas com número inteiro (ex: Proposta 1, Proposta 2) e descrição livre.
+- Adicionar Task IDs com label de turma (ex: `2026_6EFP2`).
+- Contagem de redações por Task ID exibida em tempo real.
+- Remoção individual de Task IDs e exclusão completa de propostas com confirmação.
+
+### 🖥️ Script de Terminal `manage_propostas.ts`
+- Novo script `scripts/manage_propostas.ts` com 6 comandos: `list`, `create`, `add`, `remove`, `delete`, `bulk`.
+- O comando `bulk` importa múltiplos Task IDs em uma única chamada JSON, ideal para configuração inicial das turmas.
+- Exibe contagem de redações ao listar ou adicionar Task IDs.
+- Documentado em `INGESTAO_CSV.md` com exemplos reais das turmas regulares e Projeto Voar 2026.
+
+### ⚡ Performance e Banco de Dados
+- **Novas tabelas**: `propostas` e `proposta_task_ids` com RLS e políticas por cargo.
+- **View `propostas_stats`**: contagem agrupada de redações por proposta sem full-scan.
+- **2 novos índices**: `idx_proposta_task_ids_task_id` e `idx_proposta_task_ids_proposta_id` para queries rápidas.
+- Relacionamento via JOIN em `task_id` — sem migration na tabela `redacoes`.
+
+---
+
 ## [v1.3] - Abril 2026
 
 ### 👀 Avaliação IA Oculta (Correção Cega)

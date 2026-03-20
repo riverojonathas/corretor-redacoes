@@ -89,6 +89,61 @@ export const EXAMPLES_FEATURES: FeaturePill[] = [
 
 export const EXAMPLES_RELEASES: ReleaseNote[] = [
     {
+        id: 'v1.4',
+        version: 'v1.4',
+        date: 'Março 2026',
+        title: 'Gestão de Propostas por Task ID',
+        description: 'Sistema para classificar redações por Número de Proposta via mapeamento de Task IDs, com painel admin e script de terminal.',
+        category: 'nova-feature',
+        changes: [
+            {
+                section: '🎫 Número de Proposta por Task ID',
+                items: [
+                    'Nova tabela `propostas` e `proposta_task_ids` no banco de dados para mapear Task IDs a números de proposta.',
+                    'Cada Task ID só pode pertencer a uma proposta por vez (campo UNIQUE), evitando duplo vínculo.',
+                    'Operação reversível: remover um Task ID de uma proposta não apaga a proposta nem as redações.',
+                    'Relacionamento via JOIN entre `redacoes.task_id` e `proposta_task_ids.task_id` — sem alteração massiva na tabela de redações.',
+                ],
+            },
+            {
+                section: '⚙️ Painel Admin — Aba Propostas',
+                items: [
+                    'Nova aba "Propostas" em Configurações (visível apenas para Administradores).',
+                    'Criação de propostas com número inteiro e descrição livre.',
+                    'Adicionar Task IDs a uma proposta com campo de label da turma (ex: 2026_6EFP2).',
+                    'Exibição da contagem de redações por Task ID em tempo real.',
+                    'Remoção individual de Task IDs sem apagar a proposta.',
+                    'Exclusão completa de proposta com confirmação (remove Task IDs via CASCADE).',
+                ],
+            },
+            {
+                section: '🖥️ Script de Terminal',
+                items: [
+                    'Novo script `scripts/manage_propostas.ts` para gerenciar propostas via terminal.',
+                    'Comandos: `list`, `create`, `add`, `remove`, `delete`, `bulk`.',
+                    'O comando `bulk` permite importar múltiplos Task IDs em uma única chamada via JSON inline.',
+                    'Exibe contagem de redações por Task ID ao listar ou adicionar.',
+                    'Documentado completamente em `INGESTAO_CSV.md` com exemplos práticos das turmas 2026.',
+                ],
+            },
+            {
+                section: '⚡ Performance',
+                items: [
+                    'View SQL `propostas_stats` para contagem agrupada de redações por proposta sem full-scan.',
+                    'Índices criados em `task_id` e `proposta_id` garantindo queries Rápidas mesmo com milhões de registros.',
+                    'Frontend usa lazy load e uma única requisição untuk listar propostas e contagens.',
+                ],
+            },
+            {
+                section: '📖 Documentação',
+                items: [
+                    '`DATABASE_SCHEMA.md` atualizado com Seção 10 (Fase G) detalhando as novas tabelas, view e índices.',
+                    '`INGESTAO_CSV.md` atualizado com Seção 5 documetando todos os comandos do script de terminal e exemplos com as turmas reais de 2026.',
+                ],
+            },
+        ],
+    },
+    {
         id: 'v1.3',
         version: 'v1.3',
         date: 'Abril 2026',

@@ -2,16 +2,17 @@
 
 import React, { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
-import { UserCircle, Shield, Layout, Settings as SettingsIcon, LifeBuoy } from 'lucide-react';
+import { UserCircle, Shield, Layout, Settings as SettingsIcon, LifeBuoy, BookOpen } from 'lucide-react';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { SecuritySettings } from '@/components/settings/SecuritySettings';
 import { WorkspaceSettings } from '@/components/settings/WorkspaceSettings';
 import { MyChamados } from '@/components/settings/MyChamados';
 import { AdminSettings } from '@/components/settings/AdminSettings';
+import { PropostasAdmin } from '@/components/settings/PropostasAdmin';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
-type Tab = 'profile' | 'security' | 'workspace' | 'chamados' | 'admin';
+type Tab = 'profile' | 'security' | 'workspace' | 'chamados' | 'admin' | 'propostas';
 
 export default function SettingsPage() {
     const { cargo } = useAuth();
@@ -26,6 +27,7 @@ export default function SettingsPage() {
 
     if (cargo === 'admin') {
         tabs.push({ id: 'admin', label: 'Administração', icon: Shield });
+        tabs.push({ id: 'propostas', label: 'Propostas', icon: BookOpen });
     }
 
     return (
@@ -82,6 +84,7 @@ export default function SettingsPage() {
                             </div>
                         )}
                         {activeTab === 'admin' && cargo === 'admin' && <AdminSettings />}
+                        {activeTab === 'propostas' && cargo === 'admin' && <PropostasAdmin />}
                     </div>
 
                 </div>
