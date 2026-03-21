@@ -24,7 +24,10 @@ export interface RedacaoListItem {
     titulo_modelo?: string;
     nm_tipo_ensino?: string;
     answer_id?: string;
-    isLocked?: boolean; // true quando outro corretor está revisando (Fase D)
+    isLocked?: boolean;
+    proposta_numero?: number;
+    proposta_label?: string;
+    created_at?: string;
 }
 
 

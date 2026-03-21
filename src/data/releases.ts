@@ -117,6 +117,15 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                 ],
             },
             {
+                section: '📋 Fila de Revisão e Busca',
+                items: [
+                    'Novo filtro por Número de Proposta na barra de busca da mesa de revisão.',
+                    'Exibição de Tags (Badges) coloridas (P1, P2, etc.) em cada redação para fácil identificação.',
+                    'Tooltip detalhado ao passar o mouse na tag da proposta, mostrando o label da turma (ex: 2026_6EFP2).',
+                    'Integração de busca server-side via JOIN otimizado, mantendo a performance mesmo com grandes volumes de dados.',
+                ],
+            },
+            {
                 section: '🖥️ Script de Terminal',
                 items: [
                     'Novo script `scripts/manage_propostas.ts` para gerenciar propostas via terminal.',

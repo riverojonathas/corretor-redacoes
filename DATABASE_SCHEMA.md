@@ -538,10 +538,12 @@ CREATE POLICY "Admin gerencia proposta_task_ids" ON public.proposta_task_ids FOR
 );
 ```
 
-### View `propostas_stats`
-Facilita a contagem de redações por proposta e task_id em uma única query.
+### Scripts de Migração e Views (Executar apenas o necessário)
+
+Se as tabelas já existem, execute apenas as Views abaixo para atualizar a lógica da Fila de Revisão:
 
 ```sql
+-- 1. View para Estatísticas do Admin (Fase G)
 CREATE OR REPLACE VIEW public.propostas_stats AS
 SELECT
     p.id            AS proposta_id,
@@ -555,6 +557,25 @@ LEFT JOIN public.proposta_task_ids pt ON pt.proposta_id = p.id
 LEFT JOIN public.redacoes r ON r.task_id = pt.task_id
 GROUP BY p.id, p.numero, p.descricao, pt.task_id, pt.turma_label
 ORDER BY p.numero, pt.turma_label;
+
+-- 2. View para a Fila de Revisão (JOIN com propostas para v1.4)
+CREATE OR REPLACE VIEW public.redacoes_revisao_view AS
+SELECT 
+    r.id,
+    r.title,
+    r.nick,
+    r.extra_fields,
+    r.answer_id,
+    r.created_at,
+    r.locked_by,
+    r.locked_at,
+    r.task_id,
+    pt.turma_label AS proposta_label,
+    p.numero AS proposta_numero,
+    pt.proposta_id
+FROM public.redacoes r
+LEFT JOIN public.proposta_task_ids pt ON pt.task_id = r.task_id
+LEFT JOIN public.propostas p ON p.id = pt.proposta_id;
 ```
 
 ### Índices adicionados (Fase G)

@@ -11,9 +11,10 @@ export interface ListFilters {
     serie: string;
     favorita: boolean;
     status: FilterStatus;
+    proposta_id: string; // 'todas' ou UUID
 }
 
-const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'pendente' };
+const INITIAL_FILTERS: ListFilters = { busca: '', serie: '', favorita: false, status: 'pendente', proposta_id: 'todas' };
 
 export function useRedacoesList(userId: string | undefined, shouldFetch: boolean = true) {
     const [lista, setLista] = useState<RedacaoListItem[]>([]);
@@ -42,7 +43,7 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
         if (!userId || !shouldFetch) return;
         setLoading(true);
         try {
-            let selectString = 'id, title, nick, extra_fields, answer_id, locked_by, locked_at';
+            let selectString = 'id, title, nick, extra_fields, answer_id, created_at, locked_by, locked_at, task_id, proposta_label, proposta_numero, proposta_id';
             
             if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
                 selectString += `, revisoes!inner(id, corretor_id, favorita, status)`;
@@ -51,7 +52,7 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
             }
 
             let query = supabase
-                .from('redacoes')
+                .from('redacoes_revisao_view')
                 .select(selectString)
                 .order('created_at', { ascending: false })
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
@@ -68,6 +69,11 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
             }
             if (debouncedFilters.serie.trim()) {
                 query = query.ilike('extra_fields->>redacao_ano_serie', `%${debouncedFilters.serie}%`);
+            }
+
+            // Filtro por Proposta (via VIEW)
+            if (debouncedFilters.proposta_id !== 'todas') {
+                query = query.eq('proposta_id', debouncedFilters.proposta_id);
             }
 
             const { data: redacoes, error } = await query;
@@ -98,14 +104,17 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
                         revisao_id: rev?.id,
                         favorita: rev?.favorita || false,
                         isLocked: !!isLocked && r.locked_by !== userId,
+                        proposta_numero: r.proposta_numero,
+                        proposta_label: r.proposta_label,
+                        created_at: r.created_at,
                     };
                 });
 
                 setHasMore(redacoes.length === PAGE_SIZE);
                 setLista(prev => append ? [...prev, ...formatadas] : formatadas);
             }
-        } catch (err) {
-            console.error('Erro ao buscar lista:', err);
+        } catch (err: any) {
+            console.error('Erro ao buscar lista:', err?.message || err);
         } finally {
             setLoading(false);
         }

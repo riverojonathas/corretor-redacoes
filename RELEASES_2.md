@@ -7,6 +7,12 @@
 - **Reversível**: Remover um Task ID de uma proposta não apaga a proposta nem as redações — basta `remove` e `add` para reatribuir.
 - **Unicidade garantida**: Um Task ID só pode pertencer a uma proposta por vez (`UNIQUE` no banco), evitando duplo vínculo.
 
+### 📋 Fila de Revisão
+- **Busca por Proposta**: Novo seletor na barra de filtros para filtrar redações por Número de Proposta.
+- **Tags Visuais**: Badges coloridos (P1, P2) identificam a qual proposta a redação pertence diretamente na lista.
+- **Identificação de Turma**: Tooltip nas tags mostram o label descritivo da turma (ex: `2026_6EFP2`).
+- **Performance**: Consultas otimizadas via JOIN no banco de dados, sem impacto na latência da fila.
+
 ### ⚙️ Painel Admin — Aba "Propostas"
 - **Nova aba** em Configurações → Propostas (visível apenas para Administradores).
 - Criar propostas com número inteiro (ex: Proposta 1, Proposta 2) e descrição livre.

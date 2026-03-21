@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import { RedacaoListItem } from '@/types/dashboard';
 import { ListFilters, FilterStatus } from '@/hooks/useRedacoesList';
+import { usePropostas } from '@/hooks/usePropostas';
+import { cn } from '@/lib/utils';
 
 interface RedacaoListProps {
     lista: RedacaoListItem[];
@@ -34,6 +36,12 @@ interface RedacaoListProps {
     isViewer?: boolean;
 }
 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
+
 export function RedacaoList({
     lista,
     loading,
@@ -47,6 +55,8 @@ export function RedacaoList({
     onGoToRevision,
     isViewer = false,
 }: RedacaoListProps) {
+
+    const { propostas, loading: loadingPropostas } = usePropostas();
 
     const setField = <K extends keyof ListFilters>(key: K, value: ListFilters[K]) => {
         onFilterChange({ ...filters, [key]: value });
@@ -125,6 +135,19 @@ export function RedacaoList({
                             className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20"
                         />
                     </div>
+                    <div className="w-full md:w-48">
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 pl-1">Proposta</label>
+                        <select
+                            value={filters.proposta_id}
+                            onChange={(e) => setField('proposta_id', e.target.value)}
+                            className="w-full bg-white border border-gray-200 shadow-sm rounded-xl px-4 py-3.5 text-sm outline-none transition-all focus:ring-2 focus:ring-red-500/20 appearance-none"
+                        >
+                            <option value="todas">Todas</option>
+                            {propostas.map(p => (
+                                <option key={p.id} value={p.id}>P{p.numero} - {p.descricao}</option>
+                            ))}
+                        </select>
+                    </div>
                     <div>
                         <button
                             onClick={() => setField('favorita', !filters.favorita)}
@@ -187,6 +210,25 @@ export function RedacaoList({
                                 >
                                     <div className="flex-1 min-w-0 pr-4">
                                         <div className="flex items-center flex-wrap gap-2 mb-3">
+
+                                            {/* Badge de Proposta — v1.4 */}
+                                            {item.proposta_numero && (
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <span className={cn(
+                                                            "flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] font-bold uppercase tracking-wider border",
+                                                            item.proposta_numero === 1 
+                                                                ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                                        )}>
+                                                            <BookOpen size={10} /> P{item.proposta_numero}
+                                                        </span>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="top">
+                                                        {item.proposta_label || `Proposta ${item.proposta_numero}`}
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            )}
 
                                             {/* Badge de lock — Fase D */}
                                             {item.isLocked && (
