@@ -243,13 +243,15 @@ export function MesaCorretor({ initialAnswerId }: { initialAnswerId?: string }) 
     }, [view, isDirty, lockBlocked]);
 
     // ── Inicialização: se tem answer_id direto, vai pra correção ─
+    const hasLoadedRef = React.useRef(false);
     useEffect(() => {
-        if (!user) return;
+        if (!user?.id || hasLoadedRef.current) return;
         if (initialAnswerId) {
+            hasLoadedRef.current = true;
             setView('correction');
             loadInitialAnswer(initialAnswerId);
         }
-    }, [initialAnswerId, user]);
+    }, [initialAnswerId, user?.id]);
 
     const loadInitialAnswer = async (answerId: string) => {
         setLoadingRedacao(true);

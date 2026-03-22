@@ -123,6 +123,7 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                     'Exibição de Tags (Badges) coloridas (P1, P2, etc.) em cada redação para fácil identificação.',
                     'Tooltip detalhado ao passar o mouse na tag da proposta, mostrando o label da turma (ex: 2026_6EFP2).',
                     'Integração de busca server-side via JOIN otimizado, mantendo a performance mesmo com grandes volumes de dados.',
+                    'Hotfix: Mesa de Correção agora imune a Focus Redraw da aba. O corretor não perde mais o formulário ao alternar guias no navegador.',
                 ],
             },
             {

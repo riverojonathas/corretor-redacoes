@@ -7,10 +7,11 @@
 - **Reversível**: Remover um Task ID de uma proposta não apaga a proposta nem as redações — basta `remove` e `add` para reatribuir.
 - **Unicidade garantida**: Um Task ID só pode pertencer a uma proposta por vez (`UNIQUE` no banco), evitando duplo vínculo.
 
-### 📋 Fila de Revisão
+### 📋 Fila de Revisão e Mesa do Corretor
 - **Busca por Proposta**: Novo seletor na barra de filtros para filtrar redações por Número de Proposta.
 - **Tags Visuais**: Badges coloridos (P1, P2) identificam a qual proposta a redação pertence diretamente na lista.
 - **Identificação de Turma**: Tooltip nas tags mostram o label descritivo da turma (ex: `2026_6EFP2`).
+- **Prevenção de Perda de Dados (Hotfix)**: A Mesa do Corretor agora blinda o formulário contra validações de Window Focus. Mudar de aba no navegador ou perder e ganhar foco não fará mais o sistema limpar dados digitados não-salvos para re-baixar informações do BD.
 - **Performance**: Consultas otimizadas via JOIN no banco de dados, sem impacto na latência da fila.
 
 ### ⚙️ Painel Admin — Aba "Propostas"
