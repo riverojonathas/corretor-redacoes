@@ -26,9 +26,18 @@
 - Exibe contagem de redações ao listar ou adicionar Task IDs.
 - Documentado em `INGESTAO_CSV.md` com exemplos reais das turmas regulares e Projeto Voar 2026.
 
+### 📊 Dashboard e Matriz da IA
+- **Card de Totalizadores**: Incluído card informando o total de Propostas disponíveis no sistema e o montante de redações agrupadas nelas.
+- **Matriz da IA Filtrável**: A Matriz de Qualidade da IA agora possui menus interativos para explorar acertos da Inteligência Artificial por:
+  - Número da Proposta
+  - Label da Turma
+  - Task ID Específico
+- **Zero Full-Scans**: A Matriz reagrupa e soma avaliações localmente a partir de relatórios parciais baixados em cache do Supabase, evitando travar bancos massivos.
+
 ### ⚡ Performance e Banco de Dados
 - **Novas tabelas**: `propostas` e `proposta_task_ids` com RLS e políticas por cargo.
-- **View `propostas_stats`**: contagem agrupada de redações por proposta sem full-scan.
+- **Views Consolidadas**: `propostas_stats`, `dashboard_propostas_resumo` e `dashboard_ai_eval_matrix_stats` redesenhadas para abstrair joins pesados para relatórios.
+- **Pagination Server-Side (Overfetching resolvido)**: Criação da `fila_revisao_view`, delegando todo o filtro de status ("Pendente") e limite de página ao Supabase, impedindo travamento de React sob alto uso.
 - **2 novos índices**: `idx_proposta_task_ids_task_id` e `idx_proposta_task_ids_proposta_id` para queries rápidas.
 - Relacionamento via JOIN em `task_id` — sem migration na tabela `redacoes`.
 

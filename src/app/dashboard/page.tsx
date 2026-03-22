@@ -14,7 +14,10 @@ interface Stats {
     totalRevisoes: number;
     notaMediaGeral: number;
     mediasPorSerie: Record<string, number>;
-    aiStats: any[];
+    aiStats: any[]; // Todos os dados granulares da Matriz
+    totalPropostas?: number;
+    totalRedacoesPropostas?: number;
+    propostasDisponiveis?: any[]; // {proposta_id, numero_proposta, descricao, task_id, turma_label}
 }
 
 export default function DashboardPage() {
@@ -23,12 +26,34 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [loadingStats, setLoadingStats] = useState(true);
 
+    // Filtros da Matriz
+    const [filterProposta, setFilterProposta] = useState<string>('todas');
+    const [filterLabel, setFilterLabel] = useState<string>('todos');
+    const [filterTaskId, setFilterTaskId] = useState<string>('todos');
+
+    // Dados Filtrados da Matriz
+    const filteredAiStats = stats?.aiStats?.filter(row => {
+        if (filterProposta !== 'todas' && String(row.proposta_numero) !== filterProposta) return false;
+        if (filterLabel !== 'todos' && row.turma_label !== filterLabel) return false;
+        if (filterTaskId !== 'todos' && row.task_id !== filterTaskId) return false;
+        return true;
+    }) || [];
+
+    // Opções Dinâmicas para os Selects de Filtro
+    const propostasOptions = Array.from(new Set(stats?.propostasDisponiveis?.map(p => p.numero_proposta).filter(Boolean)));
+    const labelsOptions = Array.from(new Set(stats?.propostasDisponiveis?.filter(p => filterProposta === 'todas' || String(p.numero_proposta) === filterProposta).map(p => p.turma_label).filter(Boolean)));
+    const taskIdsOptions = Array.from(new Set(stats?.propostasDisponiveis?.filter(p => {
+        if (filterProposta !== 'todas' && String(p.numero_proposta) !== filterProposta) return false;
+        if (filterLabel !== 'todos' && p.turma_label !== filterLabel) return false;
+        return true;
+    }).map(p => p.task_id).filter(Boolean)));
+
     useEffect(() => {
         async function fetchMetrics() {
             setLoadingStats(true);
             try {
                 // Fase B: usa as Views SQL para evitar full-scan
-                const [statsResult, serieResult, aiEvalResult] = await Promise.all([
+                const [statsResult, serieResult, aiEvalResult, resumoPropostasResult, propostasStatsResult] = await Promise.all([
                     supabase
                         .from('dashboard_stats')
                         .select('total_redacoes, total_modelos, total_revisoes, nota_media_geral')
@@ -38,13 +63,21 @@ export default function DashboardPage() {
                         .select('serie, nota_media'),
                     supabase
                         .from('dashboard_ai_eval_matrix_stats')
-                        .select('criterio, tema, avaliacao, total')
+                        .select('criterio, tema, avaliacao, total, proposta_id, task_id, turma_label, proposta_numero'),
+                    supabase
+                        .from('dashboard_propostas_resumo')
+                        .select('*')
+                        .single(),
+                    supabase
+                        .from('propostas_stats')
+                        .select('proposta_id, numero_proposta, descricao, task_id, turma_label')
                 ]);
 
                 const statsData = statsResult.data;
                 const serieData = serieResult.data ?? [];
-                // Se der erro por a View não existir, aiEvalResult.error será populado
                 const aiStatsData = aiEvalResult.data ?? []; 
+                const resumoPropostas = resumoPropostasResult.data;
+                const propostasList = propostasStatsResult.data ?? [];
 
                 if (!statsData) {
                     setLoadingStats(false);
@@ -62,7 +95,10 @@ export default function DashboardPage() {
                     totalRevisoes: Number(statsData.total_revisoes) || 0,
                     notaMediaGeral: Number(statsData.nota_media_geral) || 0,
                     mediasPorSerie,
-                    aiStats: aiStatsData
+                    aiStats: aiStatsData,
+                    totalPropostas: Number(resumoPropostas?.total_propostas || 0),
+                    totalRedacoesPropostas: Number(resumoPropostas?.total_redacoes_propostas || 0),
+                    propostasDisponiveis: propostasList
                 });
             } catch (err) {
                 console.error("Erro ao buscar estatísticas", err);
@@ -130,9 +166,10 @@ export default function DashboardPage() {
                             <BookOpen size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Modelos Disponíveis</p>
-                            <p className="text-2xl font-bold text-dark-gray">
-                                {loadingStats ? '...' : stats?.totalModelos || 0}
+                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Propostas / Agrupamentos</p>
+                            <p className="text-2xl font-bold text-dark-gray flex items-end gap-2">
+                                {loadingStats ? '...' : stats?.totalPropostas || 0}
+                                <span className="text-xs font-normal text-gray-400 mb-1">({stats?.totalRedacoesPropostas} redações agrupadas)</span>
                             </p>
                         </div>
                     </div>
@@ -169,6 +206,72 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-1 gap-8">
                     {/* Gráfico de Avaliação da IA */}
                     <div className="w-full">
+                        {/* Filtros da Matriz */}
+                        <div className="flex flex-wrap gap-4 mb-4 bg-white/40 p-4 rounded-xl border border-gray-200/50 shadow-sm items-end">
+                            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Filtrar por Proposta</label>
+                                <select 
+                                    className="w-full text-sm border-gray-200 rounded-lg bg-white/60 focus:ring-accent-red focus:border-accent-red select-sm transition-all text-dark-gray"
+                                    value={filterProposta}
+                                    onChange={(e) => {
+                                        setFilterProposta(e.target.value);
+                                        setFilterLabel('todos');
+                                        setFilterTaskId('todos');
+                                    }}
+                                >
+                                    <option value="todas">Todas as Propostas</option>
+                                    <option value="undefined">Redações Sem Proposta (Avulsas)</option>
+                                    {propostasOptions.map(num => (
+                                        <option key={String(num)} value={String(num)}>Proposta Num. {num}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Filtrar por Label (Turma)</label>
+                                <select 
+                                    className="w-full text-sm border-gray-200 rounded-lg bg-white/60 focus:ring-accent-red focus:border-accent-red select-sm transition-all disabled:opacity-50 text-dark-gray"
+                                    value={filterLabel}
+                                    onChange={(e) => {
+                                        setFilterLabel(e.target.value);
+                                        setFilterTaskId('todos');
+                                    }}
+                                    disabled={filterProposta === 'undefined'}
+                                >
+                                    <option value="todos">Todos os Labels</option>
+                                    {labelsOptions.map(lbl => (
+                                        <option key={String(lbl)} value={String(lbl)}>{String(lbl)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Filtrar por Task ID</label>
+                                <select 
+                                    className="w-full text-sm border-gray-200 rounded-lg bg-white/60 focus:ring-accent-red focus:border-accent-red select-sm transition-all disabled:opacity-50 text-dark-gray"
+                                    value={filterTaskId}
+                                    onChange={(e) => setFilterTaskId(e.target.value)}
+                                    disabled={filterProposta === 'undefined'}
+                                >
+                                    <option value="todos">Todos os Task IDs</option>
+                                    {taskIdsOptions.map(tid => (
+                                        <option key={String(tid)} value={String(tid)}>ID: {String(tid)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            {/* Botão Limpar */}
+                            {(filterProposta !== 'todas' || filterLabel !== 'todos' || filterTaskId !== 'todos') && (
+                                <button 
+                                    onClick={() => {
+                                        setFilterProposta('todas');
+                                        setFilterLabel('todos');
+                                        setFilterTaskId('todos');
+                                    }}
+                                    className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-accent-red bg-gray-100 hover:bg-accent-red/10 rounded-lg transition-colors h-[38px]"
+                                >
+                                    Limpar Filtros
+                                </button>
+                            )}
+                        </div>
+
                         {loadingStats ? (
                             <div className="bg-white/40 p-8 rounded-2xl border border-gray-200/50 shadow-sm animate-pulse min-h-[300px]">
                                 <div className="h-6 bg-black/5 rounded w-1/3 mb-6"></div>
@@ -179,7 +282,7 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         ) : (
-                            <AIEvalChart data={stats?.aiStats || []} />
+                            <AIEvalChart data={filteredAiStats} />
                         )}
                     </div>
                 </div>

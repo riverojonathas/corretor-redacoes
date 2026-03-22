@@ -43,22 +43,22 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
         if (!userId || !shouldFetch) return;
         setLoading(true);
         try {
-            let selectString = 'id, title, nick, extra_fields, answer_id, created_at, locked_by, locked_at, task_id, proposta_label, proposta_numero, proposta_id';
+            const selectString = 'id, title, nick, extra_fields, answer_id, created_at, locked_by, locked_at, task_id, proposta_label, proposta_numero, proposta_id, status, favorita, revisao_id';
             
-            if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
-                selectString += `, revisoes!inner(id, corretor_id, favorita, status)`;
-            } else {
-                selectString += `, revisoes(id, corretor_id, favorita, status)`;
-            }
-
             let query = supabase
-                .from('redacoes_revisao_view')
+                .from('fila_revisao_view')
                 .select(selectString)
                 .order('created_at', { ascending: false })
                 .range(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE - 1);
 
-            if (debouncedFilters.status === 'rascunho' || debouncedFilters.status === 'concluida') {
-                query = query.eq('revisoes.status', debouncedFilters.status);
+            // Filtro por status real no Banco!
+            if (debouncedFilters.status !== 'todas') {
+                query = query.eq('status', debouncedFilters.status);
+            }
+
+            // Filtro por favoritas nativo no Banco
+            if (debouncedFilters.favorita) {
+                query = query.eq('favorita', true);
             }
 
             // Filtros server-side via .ilike()
@@ -81,11 +81,6 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
 
             if (redacoes) {
                 const formatadas: RedacaoListItem[] = redacoes.map((r: any) => {
-                    let revArray = r.revisoes;
-                    if (revArray && !Array.isArray(revArray)) revArray = [revArray];
-                    
-                    // Pega a primeira revisão encontrada (já que haverá apenas uma UNIQUE em breve)
-                    const rev = revArray?.[0];
                     const extras = r.extra_fields || {};
                     // Verifica se o lock ainda é válido (TTL 30min)
                     const LOCK_TTL_MS = 30 * 60 * 1000;
@@ -100,9 +95,9 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
                         titulo_modelo: extras.redacao_tema || '',
                         nm_tipo_ensino: extras.nm_tipo_ensino || '',
                         answer_id: r.answer_id,
-                        status: rev ? (rev.status || 'concluida') : 'pendente',
-                        revisao_id: rev?.id,
-                        favorita: rev?.favorita || false,
+                        status: r.status || 'pendente',
+                        revisao_id: r.revisao_id,
+                        favorita: r.favorita || false,
                         isLocked: !!isLocked && r.locked_by !== userId,
                         proposta_numero: r.proposta_numero,
                         proposta_label: r.proposta_label,
@@ -110,8 +105,25 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
                     };
                 });
 
+                // Filtragem client-side para assegurar Unicidade total pelo ID da Redação
+                // Em caso de Redações espelhadas em múltiplas turmas/propostas, será mostrada só a principal.
+                const dedupMap = new Map<string, RedacaoListItem>();
+                formatadas.forEach(f => {
+                    if (!dedupMap.has(f.id)) {
+                        dedupMap.set(f.id, f);
+                    }
+                });
+                const formatadasUnicas = Array.from(dedupMap.values());
+
                 setHasMore(redacoes.length === PAGE_SIZE);
-                setLista(prev => append ? [...prev, ...formatadas] : formatadas);
+                setLista(prev => {
+                    if (append) {
+                        const prevIds = new Set(prev.map(p => p.id));
+                        const absolutelyNew = formatadasUnicas.filter(f => !prevIds.has(f.id));
+                        return [...prev, ...absolutelyNew];
+                    }
+                    return formatadasUnicas;
+                });
             }
         } catch (err: any) {
             console.error('Erro ao buscar lista:', err?.message || err);
@@ -130,17 +142,10 @@ export function useRedacoesList(userId: string | undefined, shouldFetch: boolean
         fetchLista(nextPage, true);
     }, [page, fetchLista]);
 
-    // Filtro client-side apenas para "favorita" e "pendente" (boolean simples sobre dados já carregados)
-    const listaFiltrada = lista.filter(r => {
-        if (debouncedFilters.favorita && !r.favorita) return false;
-        if (debouncedFilters.status === 'pendente' && r.status !== 'pendente') return false;
-        return true;
-    });
-
     return {
-        lista: listaFiltrada,
+        lista,
         loading,
-        hasMore: hasMore && !debouncedFilters.favorita && debouncedFilters.status !== 'pendente',
+        hasMore,
         filters,
         setFilters,
         loadMore,

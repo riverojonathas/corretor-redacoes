@@ -228,20 +228,33 @@ Agrupa redações por série escolar e calcula a nota média de cada grupo.
 | `nota_media` | `numeric` | Média da nota total nessa série |
 
 ### `dashboard_ai_eval_matrix_stats`
-Consolida as avaliações dos corretores sobre todos os quesitos de todos os critérios da IA.
+Consolida as avaliações dos corretores sobre todos os quesitos de todos os critérios da IA, permitindo agora filtros por proposta e task_id agrupados.
 
 | Coluna | Tipo | Descrição |
 | :--- | :--- | :--- |
 | `criterio` | `text` | Qual o critério (C1, C2, C3, C4, C5) |
 | `tema` | `text` | Qual o quesito analisado (tema_1_positivos, tema_2_problema, tema_3_melhoria, tema_4_nota) |
-| `avaliacao` | `text` | O valor que foi respondido pelo humano (ex: Satisfatório, Adequada, Alucinação) |
+| `avaliacao` | `text` | O valor que foi respondido pelo humano (ex: Satisfatório, Adequada) |
+| `proposta_id` | `uuid` | ID da proposta vinculada à redação |
+| `task_id` | `text` | Task ID da redação |
+| `turma_label` | `text` | Label da turma (ex: 2026_6EFP2) |
+| `proposta_numero` | `integer` | Número da Proposta (1, 2, etc.) |
 | `total` | `bigint` | Contagem total de vezes que essa avaliação foi dada |
 
-### Script SQL (Fase B)
+### `dashboard_propostas_resumo` (Nova View v1.4)
+Consolida em uma única linha o total de propostas cadastradas e o total de redações pendentes ou mapeadas nelas.
+
+| Coluna | Tipo | Descrição |
+| :--- | :--- | :--- |
+| `total_propostas` | `bigint` | Quantidade de cadastradas |
+| `total_redacoes_propostas` | `bigint` | Soma de todas redações alocadas em propostas |
+| `redacoes_sem_proposta` | `bigint` | Redações orfãs (sem task_id mapeado) |
+
+### Script SQL (Fase B/H - Atualizado v1.4)
 
 ```sql
 -- ============================================================
--- FASE B: Views de Performance para o Dashboard
+-- FASE B/H: Views de Performance para o Dashboard
 -- Executar no SQL Editor do Supabase
 -- ============================================================
 
@@ -292,32 +305,58 @@ WHERE evaluated_skills IS NOT NULL
 GROUP BY COALESCE(TRIM(extra_fields->>'redacao_ano_serie'), 'Outros')
 ORDER BY nota_media DESC;
 
--- View 3: Matriz Global de Avaliação da IA
+-- View 3: Resumo de Propostas
+CREATE OR REPLACE VIEW public.dashboard_propostas_resumo AS
+SELECT 
+    (SELECT COUNT(*) FROM public.propostas) AS total_propostas,
+    (SELECT SUM(total_redacoes) FROM public.propostas_stats) AS total_redacoes_propostas,
+    (SELECT COUNT(*) FROM public.redacoes r LEFT JOIN public.proposta_task_ids pt ON r.task_id = pt.task_id WHERE pt.proposta_id IS NULL) AS redacoes_sem_proposta;
+
+-- View 4: View Base Auxiliar para Matriz de Qualidade (Evita 20 Joins Simultâneos)
+CREATE OR REPLACE VIEW public.dashboard_ai_eval_matrix_base AS
+SELECT 
+    rev.id AS revisao_id,
+    pt.proposta_id,
+    pt.task_id,
+    pt.turma_label,
+    p.numero AS proposta_numero,
+    rev.criterio_1_tema_1, rev.criterio_1_tema_2, rev.criterio_1_tema_3, rev.criterio_1_tema_4,
+    rev.criterio_2_tema_1, rev.criterio_2_tema_2, rev.criterio_2_tema_3, rev.criterio_2_tema_4,
+    rev.criterio_3_tema_1, rev.criterio_3_tema_2, rev.criterio_3_tema_3, rev.criterio_3_tema_4,
+    rev.criterio_4_tema_1, rev.criterio_4_tema_2, rev.criterio_4_tema_3, rev.criterio_4_tema_4,
+    rev.criterio_5_tema_1, rev.criterio_5_tema_2, rev.criterio_5_tema_3, rev.criterio_5_tema_4
+FROM public.revisoes rev
+JOIN public.redacoes r ON r.id = rev.redacao_id
+LEFT JOIN public.proposta_task_ids pt ON pt.task_id = r.task_id
+LEFT JOIN public.propostas p ON p.id = pt.proposta_id;
+
+-- View 5: Matriz Global de Avaliação da IA (Com filtros de agrupamento)
+DROP VIEW IF EXISTS public.dashboard_ai_eval_matrix_stats;
 CREATE OR REPLACE VIEW public.dashboard_ai_eval_matrix_stats AS
-SELECT 'C1' as criterio, 'tema_1' as tema, criterio_1_tema_1 as avaliacao, COUNT(*) as total FROM public.revisoes WHERE criterio_1_tema_1 IS NOT NULL GROUP BY criterio_1_tema_1
-UNION ALL SELECT 'C1', 'tema_2', criterio_1_tema_2, COUNT(*) FROM public.revisoes WHERE criterio_1_tema_2 IS NOT NULL GROUP BY criterio_1_tema_2
-UNION ALL SELECT 'C1', 'tema_3', criterio_1_tema_3, COUNT(*) FROM public.revisoes WHERE criterio_1_tema_3 IS NOT NULL GROUP BY criterio_1_tema_3
-UNION ALL SELECT 'C1', 'tema_4', criterio_1_tema_4, COUNT(*) FROM public.revisoes WHERE criterio_1_tema_4 IS NOT NULL GROUP BY criterio_1_tema_4
+SELECT 'C1' as criterio, 'tema_1' as tema, criterio_1_tema_1 as avaliacao, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) as total FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_1 IS NOT NULL GROUP BY criterio_1_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_2', criterio_1_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_2 IS NOT NULL GROUP BY criterio_1_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_3', criterio_1_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_3 IS NOT NULL GROUP BY criterio_1_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_4', criterio_1_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_4 IS NOT NULL GROUP BY criterio_1_tema_4, proposta_id, task_id, turma_label, proposta_numero
 -- C2
-UNION ALL SELECT 'C2', 'tema_1', criterio_2_tema_1, COUNT(*) FROM public.revisoes WHERE criterio_2_tema_1 IS NOT NULL GROUP BY criterio_2_tema_1
-UNION ALL SELECT 'C2', 'tema_2', criterio_2_tema_2, COUNT(*) FROM public.revisoes WHERE criterio_2_tema_2 IS NOT NULL GROUP BY criterio_2_tema_2
-UNION ALL SELECT 'C2', 'tema_3', criterio_2_tema_3, COUNT(*) FROM public.revisoes WHERE criterio_2_tema_3 IS NOT NULL GROUP BY criterio_2_tema_3
-UNION ALL SELECT 'C2', 'tema_4', criterio_2_tema_4, COUNT(*) FROM public.revisoes WHERE criterio_2_tema_4 IS NOT NULL GROUP BY criterio_2_tema_4
+UNION ALL SELECT 'C2', 'tema_1', criterio_2_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_1 IS NOT NULL GROUP BY criterio_2_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_2', criterio_2_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_2 IS NOT NULL GROUP BY criterio_2_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_3', criterio_2_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_3 IS NOT NULL GROUP BY criterio_2_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_4', criterio_2_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_4 IS NOT NULL GROUP BY criterio_2_tema_4, proposta_id, task_id, turma_label, proposta_numero
 -- C3
-UNION ALL SELECT 'C3', 'tema_1', criterio_3_tema_1, COUNT(*) FROM public.revisoes WHERE criterio_3_tema_1 IS NOT NULL GROUP BY criterio_3_tema_1
-UNION ALL SELECT 'C3', 'tema_2', criterio_3_tema_2, COUNT(*) FROM public.revisoes WHERE criterio_3_tema_2 IS NOT NULL GROUP BY criterio_3_tema_2
-UNION ALL SELECT 'C3', 'tema_3', criterio_3_tema_3, COUNT(*) FROM public.revisoes WHERE criterio_3_tema_3 IS NOT NULL GROUP BY criterio_3_tema_3
-UNION ALL SELECT 'C3', 'tema_4', criterio_3_tema_4, COUNT(*) FROM public.revisoes WHERE criterio_3_tema_4 IS NOT NULL GROUP BY criterio_3_tema_4
+UNION ALL SELECT 'C3', 'tema_1', criterio_3_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_1 IS NOT NULL GROUP BY criterio_3_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_2', criterio_3_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_2 IS NOT NULL GROUP BY criterio_3_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_3', criterio_3_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_3 IS NOT NULL GROUP BY criterio_3_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_4', criterio_3_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_4 IS NOT NULL GROUP BY criterio_3_tema_4, proposta_id, task_id, turma_label, proposta_numero
 -- C4
-UNION ALL SELECT 'C4', 'tema_1', criterio_4_tema_1, COUNT(*) FROM public.revisoes WHERE criterio_4_tema_1 IS NOT NULL GROUP BY criterio_4_tema_1
-UNION ALL SELECT 'C4', 'tema_2', criterio_4_tema_2, COUNT(*) FROM public.revisoes WHERE criterio_4_tema_2 IS NOT NULL GROUP BY criterio_4_tema_2
-UNION ALL SELECT 'C4', 'tema_3', criterio_4_tema_3, COUNT(*) FROM public.revisoes WHERE criterio_4_tema_3 IS NOT NULL GROUP BY criterio_4_tema_3
-UNION ALL SELECT 'C4', 'tema_4', criterio_4_tema_4, COUNT(*) FROM public.revisoes WHERE criterio_4_tema_4 IS NOT NULL GROUP BY criterio_4_tema_4
+UNION ALL SELECT 'C4', 'tema_1', criterio_4_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_1 IS NOT NULL GROUP BY criterio_4_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_2', criterio_4_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_2 IS NOT NULL GROUP BY criterio_4_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_3', criterio_4_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_3 IS NOT NULL GROUP BY criterio_4_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_4', criterio_4_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_4 IS NOT NULL GROUP BY criterio_4_tema_4, proposta_id, task_id, turma_label, proposta_numero
 -- C5
-UNION ALL SELECT 'C5', 'tema_1', criterio_5_tema_1, COUNT(*) FROM public.revisoes WHERE criterio_5_tema_1 IS NOT NULL GROUP BY criterio_5_tema_1
-UNION ALL SELECT 'C5', 'tema_2', criterio_5_tema_2, COUNT(*) FROM public.revisoes WHERE criterio_5_tema_2 IS NOT NULL GROUP BY criterio_5_tema_2
-UNION ALL SELECT 'C5', 'tema_3', criterio_5_tema_3, COUNT(*) FROM public.revisoes WHERE criterio_5_tema_3 IS NOT NULL GROUP BY criterio_5_tema_3
-UNION ALL SELECT 'C5', 'tema_4', criterio_5_tema_4, COUNT(*) FROM public.revisoes WHERE criterio_5_tema_4 IS NOT NULL GROUP BY criterio_5_tema_4;
+UNION ALL SELECT 'C5', 'tema_1', criterio_5_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_1 IS NOT NULL GROUP BY criterio_5_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_2', criterio_5_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_2 IS NOT NULL GROUP BY criterio_5_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_3', criterio_5_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_3 IS NOT NULL GROUP BY criterio_5_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_4', criterio_5_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_4 IS NOT NULL GROUP BY criterio_5_tema_4, proposta_id, task_id, turma_label, proposta_numero;
 ```
 
 ### Verificar se as views foram criadas
@@ -540,7 +579,7 @@ CREATE POLICY "Admin gerencia proposta_task_ids" ON public.proposta_task_ids FOR
 
 ### Scripts de Migração e Views (Executar apenas o necessário)
 
-Se as tabelas já existem, execute apenas as Views abaixo para atualizar a lógica da Fila de Revisão:
+Se as tabelas já existem, execute apenas as Views abaixo para atualizar a lógica do Dashboard e Fila de Revisão:
 
 ```sql
 -- 1. View para Estatísticas do Admin (Fase G)
@@ -576,6 +615,88 @@ SELECT
 FROM public.redacoes r
 LEFT JOIN public.proposta_task_ids pt ON pt.task_id = r.task_id
 LEFT JOIN public.propostas p ON p.id = pt.proposta_id;
+
+-- 2.b View para a Fila de Revisão com Status Real-Time (Server Side Pagination)
+CREATE OR REPLACE VIEW public.fila_revisao_view AS
+SELECT 
+    r.id,
+    r.title,
+    r.nick,
+    r.extra_fields,
+    r.answer_id,
+    r.created_at,
+    r.locked_by,
+    r.locked_at,
+    r.task_id,
+    pt.turma_label AS proposta_label,
+    p.numero AS proposta_numero,
+    pt.proposta_id,
+    COALESCE(rev.status, 'pendente') AS status,
+    rev.favorita,
+    rev.id AS revisao_id,
+    rev.corretor_id
+FROM public.redacoes r
+LEFT JOIN public.proposta_task_ids pt ON pt.task_id = r.task_id
+LEFT JOIN public.propostas p ON p.id = pt.proposta_id
+LEFT JOIN LATERAL (
+    SELECT id, status, favorita, corretor_id 
+    FROM public.revisoes 
+    WHERE public.revisoes.redacao_id = r.id 
+    LIMIT 1
+) rev ON true;
+
+-- 3. Resumo de Propostas
+CREATE OR REPLACE VIEW public.dashboard_propostas_resumo AS
+SELECT 
+    (SELECT COUNT(*) FROM public.propostas) AS total_propostas,
+    (SELECT SUM(total_redacoes) FROM public.propostas_stats) AS total_redacoes_propostas,
+    (SELECT COUNT(*) FROM public.redacoes r LEFT JOIN public.proposta_task_ids pt ON r.task_id = pt.task_id WHERE pt.proposta_id IS NULL) AS redacoes_sem_proposta;
+
+-- 4. Base da Matriz de Qualidade (Evita 20 Joins Simultâneos)
+CREATE OR REPLACE VIEW public.dashboard_ai_eval_matrix_base AS
+SELECT 
+    rev.id AS revisao_id,
+    pt.proposta_id,
+    pt.task_id,
+    pt.turma_label,
+    p.numero AS proposta_numero,
+    rev.criterio_1_tema_1, rev.criterio_1_tema_2, rev.criterio_1_tema_3, rev.criterio_1_tema_4,
+    rev.criterio_2_tema_1, rev.criterio_2_tema_2, rev.criterio_2_tema_3, rev.criterio_2_tema_4,
+    rev.criterio_3_tema_1, rev.criterio_3_tema_2, rev.criterio_3_tema_3, rev.criterio_3_tema_4,
+    rev.criterio_4_tema_1, rev.criterio_4_tema_2, rev.criterio_4_tema_3, rev.criterio_4_tema_4,
+    rev.criterio_5_tema_1, rev.criterio_5_tema_2, rev.criterio_5_tema_3, rev.criterio_5_tema_4
+FROM public.revisoes rev
+JOIN public.redacoes r ON r.id = rev.redacao_id
+LEFT JOIN public.proposta_task_ids pt ON pt.task_id = r.task_id
+LEFT JOIN public.propostas p ON p.id = pt.proposta_id;
+
+-- 5. Matriz Global de Avaliação da IA (Com filtros de agrupamento)
+DROP VIEW IF EXISTS public.dashboard_ai_eval_matrix_stats;
+CREATE OR REPLACE VIEW public.dashboard_ai_eval_matrix_stats AS
+SELECT 'C1' as criterio, 'tema_1' as tema, criterio_1_tema_1 as avaliacao, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) as total FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_1 IS NOT NULL GROUP BY criterio_1_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_2', criterio_1_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_2 IS NOT NULL GROUP BY criterio_1_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_3', criterio_1_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_3 IS NOT NULL GROUP BY criterio_1_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C1', 'tema_4', criterio_1_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_1_tema_4 IS NOT NULL GROUP BY criterio_1_tema_4, proposta_id, task_id, turma_label, proposta_numero
+-- C2
+UNION ALL SELECT 'C2', 'tema_1', criterio_2_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_1 IS NOT NULL GROUP BY criterio_2_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_2', criterio_2_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_2 IS NOT NULL GROUP BY criterio_2_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_3', criterio_2_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_3 IS NOT NULL GROUP BY criterio_2_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C2', 'tema_4', criterio_2_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_2_tema_4 IS NOT NULL GROUP BY criterio_2_tema_4, proposta_id, task_id, turma_label, proposta_numero
+-- C3
+UNION ALL SELECT 'C3', 'tema_1', criterio_3_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_1 IS NOT NULL GROUP BY criterio_3_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_2', criterio_3_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_2 IS NOT NULL GROUP BY criterio_3_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_3', criterio_3_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_3 IS NOT NULL GROUP BY criterio_3_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C3', 'tema_4', criterio_3_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_3_tema_4 IS NOT NULL GROUP BY criterio_3_tema_4, proposta_id, task_id, turma_label, proposta_numero
+-- C4
+UNION ALL SELECT 'C4', 'tema_1', criterio_4_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_1 IS NOT NULL GROUP BY criterio_4_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_2', criterio_4_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_2 IS NOT NULL GROUP BY criterio_4_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_3', criterio_4_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_3 IS NOT NULL GROUP BY criterio_4_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C4', 'tema_4', criterio_4_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_4_tema_4 IS NOT NULL GROUP BY criterio_4_tema_4, proposta_id, task_id, turma_label, proposta_numero
+-- C5
+UNION ALL SELECT 'C5', 'tema_1', criterio_5_tema_1, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_1 IS NOT NULL GROUP BY criterio_5_tema_1, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_2', criterio_5_tema_2, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_2 IS NOT NULL GROUP BY criterio_5_tema_2, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_3', criterio_5_tema_3, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_3 IS NOT NULL GROUP BY criterio_5_tema_3, proposta_id, task_id, turma_label, proposta_numero
+UNION ALL SELECT 'C5', 'tema_4', criterio_5_tema_4, proposta_id, task_id, turma_label, proposta_numero, COUNT(*) FROM public.dashboard_ai_eval_matrix_base WHERE criterio_5_tema_4 IS NOT NULL GROUP BY criterio_5_tema_4, proposta_id, task_id, turma_label, proposta_numero;
 ```
 
 ### Índices adicionados (Fase G)

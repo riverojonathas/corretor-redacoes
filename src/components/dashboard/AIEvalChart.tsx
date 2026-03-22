@@ -61,7 +61,13 @@ export function AIEvalChart({ data }: AIEvalChartProps) {
             const cell = m[row.criterio][row.tema];
 
             cell.total += count;
-            cell.breakdown.push({ label: val, count });
+            
+            const existing = cell.breakdown.find((b: { label: string, count: number }) => b.label === val);
+            if (existing) {
+                existing.count += count;
+            } else {
+                cell.breakdown.push({ label: val, count });
+            }
 
             // Classificar o status
             const isScoreTema = row.tema === 'tema_4';

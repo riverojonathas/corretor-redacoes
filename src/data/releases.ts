@@ -136,11 +136,22 @@ export const EXAMPLES_RELEASES: ReleaseNote[] = [
                 ],
             },
             {
+                section: '📊 Dashboard e Matriz da IA',
+                items: [
+                    'Novo Card: Total de Propostas / Agrupamentos Disponíveis.',
+                    'Exibição do Total de Redações agrupadas ao lado do indicador de propostas.',
+                    'Filtros em cascata na Matriz de Qualidade da IA (Por Proposta, Por Label/Turma e Por Task ID).',
+                    'Agrupamento granulado para evitar visualização massiva: somatório em tempo real sob os filtros ativos.',
+                ],
+            },
+            {
                 section: '⚡ Performance',
                 items: [
+                    'Overfetching Resolvido: `fila_revisao_view` passa a filtrar Status de redação em db-level via Server-Side Pagination.',
                     'View SQL `propostas_stats` para contagem agrupada de redações por proposta sem full-scan.',
+                    'View SQL expandida `dashboard_ai_eval_matrix_stats` prevenida contra multijoins dispendiosos.',
+                    'Renderização Frontend deduplicada: chaves React imunes a colisão por cruzamento de Múltiplos Task IDs vs Propostas.',
                     'Índices criados em `task_id` e `proposta_id` garantindo queries Rápidas mesmo com milhões de registros.',
-                    'Frontend usa lazy load e uma única requisição untuk listar propostas e contagens.',
                 ],
             },
             {
